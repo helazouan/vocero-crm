@@ -5,6 +5,17 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.2.3 — 2026-10-23 (fork, instalación desde código)
+
+- Demostración de Inmobiliaria Horizonte, con conversaciones, conocimiento y
+  ejemplos de evaluación sobre compraventa de viviendas en español de España.
+- Importes de ejemplo en euros y fechas y horas de la bandeja con formato español.
+- La limpieza de la demo queda limitada a la organización que la solicita.
+
+Actualizar desde 2.2.2: reconstruir y reiniciar, sin migración. Los nuevos ejemplos
+se cargan solo en instalaciones vacías; la adaptación local de la demo anterior
+conserva los identificadores, seguimientos y notas personalizadas. Imagen no publicada.
+
 ## 2.2.2 — 2026-10-23 (fork, instalación desde código)
 
 - Bandeja con errores de carga y reintento en conversaciones y mensajes.

@@ -177,11 +177,11 @@ function dayLabel(iso: string): string {
   const yesterday = new Date(today.getTime() - 86400000);
   if (d.toDateString() === today.toDateString()) return "Hoy";
   if (d.toDateString() === yesterday.toDateString()) return "Ayer";
-  return d.toLocaleDateString("es-MX", { day: "numeric", month: "long" });
+  return d.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
 }
 
 function bubbleTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("es-MX", {
+  return new Date(iso).toLocaleTimeString("es-ES", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,

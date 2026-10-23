@@ -96,6 +96,12 @@ bases en el PostgreSQL local.
 
 ## Trabajar en mejoras
 
+La demostración actual es **Inmobiliaria Horizonte**, con inmuebles, compradores
+e importes ficticios en español de España. La adaptación de la antigua ferretería
+conservó identificadores, seguimientos y notas personalizadas. La copia previa
+está en `.local/antes-demo-inmobiliaria.dump`. `npm run test:e2e:demo` comprueba el
+contenido y el aislamiento en una base temporal sin alterar tus datos.
+
 ```bash
 git switch -c codex/nombre-de-la-mejora
 npm run typecheck

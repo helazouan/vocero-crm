@@ -67,6 +67,9 @@ describe("sumable", () => {
 });
 
 describe("formatMoneyCents", () => {
+  it("muestra los euros con separadores españoles", () => {
+    expect(formatMoneyCents(32_500_000, "EUR")?.replace(/\s/g, " ")).toBe("325.000,00 €");
+  });
   it("formatea en la moneda pedida", () => {
     const out = formatMoneyCents(1_250_050, "MXN");
     expect(out).toContain("12,500.50");

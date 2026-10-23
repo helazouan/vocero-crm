@@ -8,6 +8,7 @@ const config = [
       "node_modules/**",
       ".next/**",
       ".next-e2e/**",
+      ".local/**",
       "dist/**",
       "drizzle/**",
       "scripts/**",
