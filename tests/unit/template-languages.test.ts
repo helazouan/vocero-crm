@@ -18,9 +18,9 @@ describe("idiomas de plantilla", () => {
     expect([...codes].sort()).toEqual([...META].sort());
   });
 
-  it("el español va primero y el de México es el predeterminado", () => {
+  it("el español va primero y el de España es el predeterminado", () => {
     expect(TEMPLATE_LANGUAGES[0]?.code).toBe(DEFAULT_TEMPLATE_LANGUAGE);
-    expect(DEFAULT_TEMPLATE_LANGUAGE).toBe("es_MX");
+    expect(DEFAULT_TEMPLATE_LANGUAGE).toBe("es_ES");
     expect(TEMPLATE_LANGUAGE_GROUPS[0]?.id).toBe("es");
   });
 

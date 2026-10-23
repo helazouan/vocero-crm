@@ -230,7 +230,7 @@ export async function syncTemplates(organizationId: string): Promise<number> {
     );
     if (!match) continue;
     // Meta reclasifica la categoría al aprobar (una UTILITY puede volverse
-    // MARKETING, lo que cambia el costo por conversación): es autoridad.
+    // MARKETING, lo que puede cambiar la tarifa aplicable): es autoridad.
     const category = remote.category ?? match.category;
     if (match.status === status && match.category === category) continue;
     await db

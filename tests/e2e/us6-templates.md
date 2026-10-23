@@ -32,9 +32,9 @@ modo agencia no es el de esta instancia: sin pull, la plantilla se queda
    autoridad de la categoría: reclasifica al aprobar y eso cambia el costo).
    ✅ Un segundo sync devuelve `updated: 0` (idempotente).
 10. Abrir `/settings/templates` con la plantilla en pending y Meta ya aprobada.
-    ✅ El badge muestra "Aprobada" **sin tocar Sincronizar** (auto-sync al
-    montar); si el pull falla, la lista local se pinta igual y el error se
-    calla (solo el botón manual reporta errores).
+    ✅ Se carga la lista local. «Actualizar estado» consulta a Meta y muestra
+    Aprobada. Si falla, conserva la lista y muestra el error. Desde 2.5.1 no
+    realiza una sincronización silenciosa al abrir la pantalla.
 
 ## Envío con ventana cerrada
 
@@ -66,3 +66,11 @@ modo agencia no es el de esta instancia: sin pull, la plantilla se queda
     132000 de Meta si el número de parámetros no cuadra.
 14. Compatibilidad: el payload viejo `{ templateId, variable }` (una variable)
     sigue enviando — lo usa el cron de recordatorios de sesión.
+
+## Inmobiliaria y recuperación (053)
+
+`npm run test:e2e:plantillas` usa base temporal y Meta simulado. Verifica ayuda y
+consejos visibles, ejemplos de visita/operación/propuesta comercial, es_ES inicial,
+variables ficticias y vista previa, bloqueo sin conexión, errores de carga, guardado
+y sincronización con recuperación, aprobación, permisos de dirección/asesor y
+escritorio/móvil. No crea plantillas ni envía mensajes en Meta real.

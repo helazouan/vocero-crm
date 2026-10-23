@@ -5,6 +5,19 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.5.1 — Plantillas para inmobiliarias
+
+- Ayuda en español de España, consejos visibles y ejemplos de confirmación y
+  recordatorio de visita, seguimiento de operación y propuesta de vivienda.
+- Español de España predeterminado para nuevas plantillas, sin cambiar existentes;
+  categorías y ejemplos ficticios con vista previa y sin prometer aprobación.
+- Aviso de conexión pendiente; errores de carga distintos de una lista vacía,
+  reintento y conservación del formulario. Actualización de estados explícita.
+- Solo dirección crea y sincroniza; asesores consultan y utilizan las aprobadas
+  dentro de su cartera. Se corrige la referencia a tarifas por conversación.
+- Actualizar desde 2.5.0: reconstruir desde código y reiniciar. Sin migraciones ni
+  cambios de credenciales o plantillas existentes. No hay imagen del fork publicada.
+
 ## 2.5.0 — Cartera por asesor
 
 - Cada asesor consulta y gestiona únicamente clientes asignados, documentos,

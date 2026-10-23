@@ -1,6 +1,6 @@
 # Vocero CRM
 
-Este fork incorpora gestión inmobiliaria en la versión 2.5.0: inmuebles,
+Este fork incorpora gestión inmobiliaria en la versión 2.5.1: inmuebles,
 compradores/propietarios, operaciones, visitas, contratos y documentos cifrados,
 además del trabajo diario y copias de expedientes. Consulta la
 [guía inmobiliaria](docs/gestion-inmobiliaria.md) y la
