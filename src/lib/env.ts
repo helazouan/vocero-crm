@@ -10,6 +10,12 @@ import { z } from "zod";
 
 export const envSchema = z.object({
   APP_BASE_URL: z.string().url(),
+  WEBHOOK_BASE_URL: z.string().url().refine(value => {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password && url.pathname === "/" && !url.search && !url.hash;
+    } catch { return false; }
+  }, "WEBHOOK_BASE_URL debe ser un origen HTTPS sin ruta ni credenciales").optional(),
   DATABASE_URL: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(16),
   ENCRYPTION_KEY: z

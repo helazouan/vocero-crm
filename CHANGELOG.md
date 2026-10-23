@@ -5,6 +5,14 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.2.1 — 2026-10-23 (fork, instalación desde código)
+
+- `WEBHOOK_BASE_URL` permite un callback HTTPS independiente del acceso local.
+- Proxy de desarrollo limitado al webhook de WhatsApp, para túneles temporales.
+
+Actualizar desde 2.2.0: reconstruir y reiniciar, sin migración. La variable nueva
+es opcional; sin ella se mantiene el comportamiento anterior. No se publica imagen.
+
 ## 2.2.0 — 2026-10-23 (fork, instalación desde código)
 
 - Contactos paginados, filtros y prioridad antes del corte; errores visibles y

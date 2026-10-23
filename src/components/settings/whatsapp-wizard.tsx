@@ -547,7 +547,7 @@ function WebhookCard({
           <p className="flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-3 text-xs text-warning-text">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             La URL configurada no es https: Meta exige https para los webhooks.
-            Ajusta APP_BASE_URL con tu dominio público.
+            Configura WEBHOOK_BASE_URL con el origen HTTPS público del webhook.
           </p>
         )}
         <div className="space-y-1.5">
