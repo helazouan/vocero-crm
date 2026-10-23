@@ -82,6 +82,7 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   metadata: text("metadata"),
+  attentionMode: text("attention_mode", { enum: ["manual", "agent"] }),
 });
 
 export const member = pgTable("member", {
@@ -252,6 +253,9 @@ export const lead = pgTable(
      */
     priority: text("priority", { enum: ["alta", "media", "baja"] }),
     priorityUpdatedAt: timestamp("priority_updated_at"),
+    nextAction: text("next_action"),
+    nextActionAt: timestamp("next_action_at"),
+    nextActionCompletedAt: timestamp("next_action_completed_at"),
     lastActivityAt: timestamp("last_activity_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

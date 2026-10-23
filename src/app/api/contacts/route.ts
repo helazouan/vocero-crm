@@ -1,4 +1,4 @@
-import { desc, eq, inArray, or, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
@@ -25,6 +25,12 @@ export const GET = withAuth(async (session, req: Request) => {
   const q = url.searchParams.get("q")?.trim();
   const stage = url.searchParams.get("stage")?.trim();
   const includeArchived = url.searchParams.get("archived") === "true";
+  const pagination = z.object({
+    page: z.coerce.number().int().min(1).max(1000000).default(1),
+    pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  }).safeParse(Object.fromEntries([...url.searchParams].filter(([k]) => k === "page" || k === "pageSize")));
+  if (!pagination.success) return apiError(422, "invalid_query", "Paginación inválida");
+  const { page, pageSize } = pagination.data;
 
   const db = getDb();
 
@@ -72,24 +78,23 @@ export const GET = withAuth(async (session, req: Request) => {
   const stageContactIds = stage
     ? leadStages.filter((r) => r.stageName === stage).map((r) => r.contactId)
     : null;
-  if (stageContactIds?.length === 0) return Response.json({ contacts: [] });
+  if (stageContactIds?.length === 0) return Response.json({ contacts: [], total: 0, page, pageSize });
+
+  const condition = scoped(
+    schema.contact.organizationId, session.organizationId, search,
+    includeArchived ? undefined : isNull(schema.contact.archivedAt),
+    stageContactIds ? inArray(schema.contact.id, stageContactIds) : undefined
+  );
+  const [count] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.contact).where(condition);
 
   const rows = await db
     .select()
     .from(schema.contact)
-    .where(
-      scoped(
-        schema.contact.organizationId,
-        session.organizationId,
-        search,
-        stageContactIds ? inArray(schema.contact.id, stageContactIds) : undefined
-      )
-    )
-    .orderBy(desc(schema.contact.updatedAt))
-    .limit(200);
+    .where(condition)
+    .orderBy(sql`coalesce((select case l.priority when 'alta' then 0 when 'media' then 1 when 'baja' then 2 else 3 end from lead l where l.contact_id = ${schema.contact.id} and l.organization_id = ${session.organizationId}), 3)`, desc(schema.contact.updatedAt), asc(schema.contact.id))
+    .limit(pageSize).offset((page - 1) * pageSize);
 
   const contacts = rows
-    .filter((c) => includeArchived || !c.archivedAt)
     .map((c) =>
       serializeContact(
         c,
@@ -97,7 +102,7 @@ export const GET = withAuth(async (session, req: Request) => {
         priorityByContact.get(c.id) ?? null
       )
     );
-  return Response.json({ contacts });
+  return Response.json({ contacts, total: count?.total ?? 0, page, pageSize });
 });
 
 const createSchema = z.object({

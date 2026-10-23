@@ -1,4 +1,5 @@
 import type { SessionContext } from "@/lib/auth/session";
+import { attentionMode, type AttentionMode } from "./mode";
 import { canConfigure } from "@/lib/auth/roles";
 import {
   onboardingStatus,
@@ -37,6 +38,7 @@ export type GuideStep = {
 };
 
 export type Guide = {
+  mode?: AttentionMode;
   steps: GuideStep[];
   complete: boolean;
   /** El agente ya está encendido. */
@@ -52,7 +54,7 @@ export const GUIA_DEL_PAR =
 const ready = (s: ReadinessStep | undefined) => s?.status === "ready";
 
 /** Pura: de los pasos verificados a los de la guía. */
-export function guideFrom(status: OnboardingStatus): Guide {
+export function guideFrom(status: OnboardingStatus, mode: AttentionMode = "agent"): Guide {
   const step = (key: ReadinessStep["key"]) =>
     status.steps.find((s) => s.key === key);
   const profile = step("profile");
@@ -118,16 +120,19 @@ export function guideFrom(status: OnboardingStatus): Guide {
       hint: calendar.problem,
     });
   }
+  const visibleSteps = mode === "manual" ? steps.filter(s => s.key === "whatsapp" || s.key === "calendar") : steps;
   return {
-    steps,
-    complete: steps.every((s) => s.done || s.optional),
+    mode,
+    steps: visibleSteps,
+    complete: visibleSteps.every((s) => s.done || s.optional),
     enabled: status.enabled,
     brainConnected: ready(brain),
   };
 }
 
 export async function guideStatus(organizationId: string): Promise<Guide> {
-  return guideFrom(await onboardingStatus(organizationId));
+  const status = await onboardingStatus(organizationId);
+  return guideFrom(status, await attentionMode(organizationId, status));
 }
 
 /**
@@ -148,5 +153,5 @@ export async function guideFirst(
   if (!canConfigure(session.role)) return false;
   const guide = await guideStatus(session.organizationId);
   // 036 — Una bandeja manual (sin cerebro) no se queda atrapada en la guía.
-  return !guide.complete || (guide.brainConnected && !guide.enabled);
+  return !guide.complete || (guide.mode !== "manual" && guide.brainConnected && !guide.enabled);
 }

@@ -5,6 +5,22 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.2.0 — 2026-10-23 (fork, instalación desde código)
+
+- Contactos paginados, filtros y prioridad antes del corte; errores visibles y
+  reintento sin perder el formulario de edición.
+- Guía con atención manual o con agente, preferencia persistente. Cambiar a manual
+  apaga el agente; configurar IA sigue siendo opcional para operar manualmente.
+- Próxima acción por oportunidad: fecha/hora, edición y completado. Seguimientos
+  muestra Pendientes, Hoy, Vencidos y Completados, con actualización cada minuto.
+- Prueba E2E con PostgreSQL temporal y navegador; cubre errores y aislamiento.
+
+Actualizar desde 2.1.0: instalar dependencias con el lockfile, ejecutar
+`pnpm db:migrate` (0023, aditiva) y reconstruir. Guardar una copia de la base
+antes de migrar. Esta versión del fork se ejecuta desde su código: las imágenes
+del repositorio original no incluyen estos cambios. No se publica una imagen
+Docker con este cambio; para contenedores construir desde este fork.
+
 ## 2.1.0 — 2026-10-22
 
 Una bandeja que se usa como WhatsApp. Actualizar es redesplegar con la

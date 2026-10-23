@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PriorityPicker } from "./priority-picker";
 import type { BoardLead } from "./pipeline-client";
+import { NextAction } from "./next-action";
 
 /**
  * El trato, abierto, sin salir del tablero.
@@ -133,6 +134,7 @@ export function LeadDrawer({
         </header>
 
         <div className="flex-1 overflow-y-auto">
+          <NextAction key={lead.id} leadId={lead.id} />
           {/* Quién */}
           <section className="border-b p-4">
             <div className="flex items-center gap-3">
