@@ -1,3 +1,9 @@
+import { canConfigure } from "@/lib/auth/roles";
+import { assertMediaAccess, PortfolioError } from "@/server/portfolio/access";
+import { getDb, schema } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { scoped } from "@/lib/db/tenant";
+import { assertConversationAccess } from "@/server/portfolio/access";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { getConversation } from "@/server/inbox/queries";
@@ -39,17 +45,45 @@ const SEND_ERROR_STATUS: Record<SendError["code"], number> = {
  */
 export const POST = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const target = await getConversation(session.organizationId, id);
   if (!target) return apiError(404, "not_found", "Conversación no encontrada");
   if (target.conversation.isTest) {
-    return apiError(403, "sandbox_violation", "No se reenvían imágenes al Laboratorio");
+    return apiError(
+      403,
+      "sandbox_violation",
+      "No se reenvían imágenes al Laboratorio",
+    );
   }
   if (!capabilitiesFor(target.conversation.channel).outboundMedia) {
-    return apiError(422, "invalid", "Esa conversación no admite imágenes; elige una de WhatsApp");
+    return apiError(
+      422,
+      "invalid",
+      "Esa conversación no admite imágenes; elige una de WhatsApp",
+    );
   }
   const body = await parseBody(req, bodySchema);
   if (!body.ok) return body.response;
 
+  if (!canConfigure(session.role)) {
+    const [source] = await getDb()
+      .select({
+        mediaId: schema.message.mediaAssetId,
+        conversationId: schema.message.conversationId,
+      })
+      .from(schema.message)
+      .where(
+        scoped(
+          schema.message.organizationId,
+          session.organizationId,
+          eq(schema.message.id, body.data.sourceMessageId),
+        ),
+      )
+      .limit(1);
+    if (!source?.mediaId) throw new PortfolioError();
+    await assertConversationAccess(session, source.conversationId);
+    await assertMediaAccess(session, source.mediaId);
+  }
   try {
     const result = await forwardImage({
       organizationId: session.organizationId,
@@ -58,9 +92,14 @@ export const POST = withAuth(async (session, req: Request, ctx: Params) => {
     });
     return Response.json({ messageId: result.messageId }, { status: 201 });
   } catch (err) {
-    if (err instanceof ForwardImageError) return apiError(err.status, err.code, err.message);
+    if (err instanceof ForwardImageError)
+      return apiError(err.status, err.code, err.message);
     if (err instanceof MediaValidationError) {
-      return apiError(err.code === "too_large" ? 413 : 415, err.code, err.message);
+      return apiError(
+        err.code === "too_large" ? 413 : 415,
+        err.code,
+        err.message,
+      );
     }
     if (err instanceof SendError) {
       return apiError(SEND_ERROR_STATUS[err.code], err.code, err.message);

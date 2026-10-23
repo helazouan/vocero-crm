@@ -1,3 +1,4 @@
+import { assertMediaAccess } from "@/server/portfolio/access";
 import { registerIncomingDocument } from "@/server/estate/incoming-documents";
 import { canReadDocument } from "@/server/estate/service";
 import { eq } from "drizzle-orm";
@@ -23,6 +24,7 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
     return apiError(422, "invalid", "assetId inválido");
   }
 
+  await assertMediaAccess(session, assetId);
   const db = getDb();
   const rows = await db
     .select()
@@ -52,7 +54,7 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
   const document =
     linkedDocument ??
     (await registerIncomingDocument(session.organizationId, assetId));
-  if (document && !canReadDocument(session, document))
+  if (document && !await canReadDocument(session, document))
     return apiError(404, "not_found", "Adjunto no encontrado");
 
   if (asset.kind === "location" || asset.kind === "contacts") {

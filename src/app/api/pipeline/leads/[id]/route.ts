@@ -1,3 +1,4 @@
+import { assertLeadAccess } from "@/server/portfolio/access";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
@@ -49,6 +50,7 @@ const patchSchema = z.object({
 
 export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertLeadAccess(session, id);
   const body = await parseBody(req, patchSchema);
   if (!body.ok) return body.response;
 

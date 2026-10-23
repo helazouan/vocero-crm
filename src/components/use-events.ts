@@ -59,6 +59,7 @@ export function useEvents(handlers: EventHandlers): void {
       });
     };
 
+    listen("portfolio.changed", () => window.location.reload());
     listen("message.new", (d) => handlersRef.current.onMessageNew?.(d as never));
     listen("message.status", (d) =>
       handlersRef.current.onMessageStatus?.(d as never)

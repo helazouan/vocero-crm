@@ -1,4 +1,11 @@
 import {
+  assertContactAccess,
+  canAccessDocument,
+  documentClientId,
+  PortfolioError,
+} from "@/server/portfolio/access";
+import { publish } from "@/server/events/bus";
+import {
   categoryForDocumentType,
   documentRoot,
   documentSubject,
@@ -76,16 +83,7 @@ export async function activity(
     actorId: s.userId,
   });
 }
-export function canReadDocument(
-  s: SessionContext,
-  doc: { visibility: string; uploadedBy: string | null },
-) {
-  return (
-    canConfigure(s.role) ||
-    doc.visibility === "equipo" ||
-    doc.uploadedBy === s.userId
-  );
-}
+export const canReadDocument = canAccessDocument;
 export async function documentRow(
   s: SessionContext,
   id: string,
@@ -102,7 +100,8 @@ export async function documentRow(
       ),
     )
     .limit(1);
-  if (!doc || !canReadDocument(s, doc)) fail(404, "Documento no encontrado");
+  if (!doc || !(await canReadDocument(s, doc, store)))
+    fail(404, "Documento no encontrado");
   return doc;
 }
 export async function getEstateData(s: SessionContext) {
@@ -169,34 +168,69 @@ export async function getEstateData(s: SessionContext) {
       .from(S.lead)
       .where(scoped(S.lead.organizationId, org)),
   ]);
-  const visibleDocs = docs.filter((d) => canReadDocument(s, d));
+  const ownContacts = new Set(
+    profiles.filter((p) => p.assignedUserId === s.userId).map((p) => p.id),
+  );
+  const manager = canConfigure(s.role);
+  const clientOf = (d: typeof S.estateDocument.$inferSelect) => {
+    const deal = deals.find(
+      (x) =>
+        x.id === (d.dealId ?? (d.entityType === "deal" ? d.entityId : null)),
+    );
+    const property = properties.find(
+      (x) =>
+        x.id ===
+        (d.propertyId ??
+          deal?.propertyId ??
+          (d.entityType === "property" ? d.entityId : null)),
+    );
+    return (
+      d.subjectContactId ??
+      (d.entityType === "client"
+        ? d.entityId
+        : (deal?.contactId ?? property?.ownerContactId ?? null))
+    );
+  };
+  const visibleDocs = docs.filter(
+    (d) => manager || ownContacts.has(clientOf(d) ?? ""),
+  );
+  const visibleDeals = deals.filter(
+    (d) => manager || ownContacts.has(d.contactId),
+  );
+  const dealIds = new Set(visibleDeals.map((d) => d.id));
   const allowedDocIds = new Set(visibleDocs.map((d) => d.id));
   return {
-    properties,
-    deals,
-    offers,
-    visits,
+    properties: properties.map((p) =>
+      manager || !p.ownerContactId || ownContacts.has(p.ownerContactId)
+        ? p
+        : { ...p, ownerContactId: null },
+    ),
+    deals: visibleDeals,
+    offers: offers.filter((o) => manager || dealIds.has(o.dealId)),
+    visits: visits.filter((v) => manager || ownContacts.has(v.contactId)),
     team,
     userId: s.userId,
     canManage: canConfigure(s.role),
-    clients: contacts.map((c) => ({
-      id: c.id,
-      organizationId: org,
-      role: "sin_clasificar",
-      email: null,
-      budgetMin: null,
-      budgetMax: null,
-      preferredCity: null,
-      minRooms: null,
-      propertyType: null,
-      assignedUserId: null,
-      ...profiles.find((p) => p.id === c.id),
-      name: c.name,
-      phone: c.phone,
-      notes: c.notes,
-      archivedAt: c.archivedAt,
-      leadId: leads.find((l) => l.contactId === c.id)?.id ?? null,
-    })),
+    clients: contacts
+      .filter((c) => manager || ownContacts.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        organizationId: org,
+        role: "sin_clasificar",
+        email: null,
+        budgetMin: null,
+        budgetMax: null,
+        preferredCity: null,
+        minRooms: null,
+        propertyType: null,
+        assignedUserId: null,
+        ...profiles.find((p) => p.id === c.id),
+        name: c.name,
+        phone: c.phone,
+        notes: c.notes,
+        archivedAt: c.archivedAt,
+        leadId: leads.find((l) => l.contactId === c.id)?.id ?? null,
+      })),
     documents: visibleDocs.map(({ storageId, ...d }) => {
       const relatedDeal = deals.find(
         (deal) =>
@@ -224,19 +258,116 @@ export async function getEstateData(s: SessionContext) {
         hasFile: Boolean(storageId),
       };
     }),
-    activity: events.filter(
-      (e) => e.entityType !== "document" || allowedDocIds.has(e.entityId),
+    activity: events.filter((e) =>
+      e.entityType === "document"
+        ? allowedDocIds.has(e.entityId)
+        : manager ||
+          (e.entityType === "client"
+            ? ownContacts.has(e.entityId)
+            : e.entityType === "deal" && dealIds.has(e.entityId)),
     ),
   };
 }
 
 export async function mutate(s: SessionContext, input: EstateMutation) {
   const org = s.organizationId;
+  let portfolioChanged = false;
   const result = await getDb().transaction(async (db) => {
     // Las visitas y reservas del negocio se validan y escriben bajo el mismo candado.
     await db.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${org + ":estate"}, 0))`,
     );
+    const manager = canConfigure(s.role);
+    const checkDeal = async (id: string) => {
+      const [deal] = await db
+        .select()
+        .from(S.estateDeal)
+        .where(
+          scoped(S.estateDeal.organizationId, org, eq(S.estateDeal.id, id)),
+        )
+        .limit(1);
+      if (!deal) throw new PortfolioError();
+      await assertContactAccess(s, deal.contactId, db);
+    };
+    if (!manager) {
+      if (input.operation === "property")
+        fail(403, "Solo dirección puede editar inmuebles");
+      if (input.operation === "client") {
+        if (input.id) await assertContactAccess(s, input.id, db);
+        if (
+          (input.id || input.assignedUserId) &&
+          input.assignedUserId !== s.userId
+        )
+          fail(403, "Solo dirección puede reasignar clientes");
+        input.assignedUserId = s.userId;
+      }
+      if (input.operation === "deal" || input.operation === "visit") {
+        let previousAdvisor: string | null = null;
+        if (input.id) {
+          const table =
+            input.operation === "deal" ? S.estateDeal : S.estateVisit;
+          const [old] = await db
+            .select({
+              contactId: table.contactId,
+              assignedUserId: table.assignedUserId,
+            })
+            .from(table)
+            .where(scoped(table.organizationId, org, eq(table.id, input.id)))
+            .limit(1);
+          if (!old) throw new PortfolioError();
+          await assertContactAccess(s, old.contactId, db);
+          previousAdvisor = old.assignedUserId;
+        }
+        await assertContactAccess(s, input.contactId, db);
+        if (
+          input.assignedUserId &&
+          input.assignedUserId !== s.userId &&
+          input.assignedUserId !== previousAdvisor
+        )
+          fail(403, "Solo dirección puede cambiar el asesor responsable");
+        input.assignedUserId = input.id
+          ? (previousAdvisor ?? s.userId)
+          : s.userId;
+      }
+      if (input.operation === "offer") {
+        await checkDeal(input.dealId);
+        if (input.id) {
+          const [old] = await db
+            .select()
+            .from(S.estateOffer)
+            .where(
+              scoped(
+                S.estateOffer.organizationId,
+                org,
+                eq(S.estateOffer.id, input.id),
+              ),
+            )
+            .limit(1);
+          if (!old) throw new PortfolioError();
+          await checkDeal(old.dealId);
+        }
+      }
+      if (input.operation === "activity" || input.operation === "document") {
+        if (input.entityType === "client")
+          await assertContactAccess(s, input.entityId, db);
+        if (input.entityType === "deal") await checkDeal(input.entityId);
+        if (input.operation === "activity" && input.entityType === "property")
+          fail(403, "Solo dirección puede editar la actividad del inmueble");
+      }
+      if (input.operation === "document") {
+        const subject = await documentClientId(s, { ...input }, db);
+        await assertContactAccess(s, subject, db);
+        if (input.id) {
+          const old = await documentRow(s, input.id, db);
+          if ((await documentClientId(s, old, db)) !== subject)
+            fail(
+              403,
+              "Solo dirección puede trasladar documentos entre clientes",
+            );
+        }
+        if (input.dealId) await checkDeal(input.dealId);
+      }
+    }
     if (input.operation === "activity") {
       await requireEntity(db, org, input.entityType, input.entityId);
       await activity(
@@ -257,6 +388,22 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
         profile.budgetMin > profile.budgetMax
       )
         fail(422, "El presupuesto mínimo supera al máximo");
+      const [previousProfile] = provided
+        ? await db
+            .select()
+            .from(S.estateClient)
+            .where(
+              scoped(
+                S.estateClient.organizationId,
+                org,
+                eq(S.estateClient.id, provided),
+              ),
+            )
+            .limit(1)
+        : [];
+      portfolioChanged =
+        Boolean(provided) &&
+        (previousProfile?.assignedUserId ?? null) !== profile.assignedUserId;
       await member(db, org, profile.assignedUserId);
       const id = provided ?? newId("contact");
       const normalized = phone ? normalizeMx(phone.replace(/\D/g, "")) : null;
@@ -653,7 +800,7 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
         );
       if (values.fulfilsDocumentId) {
         const request = docs.find((d) => d.id === values.fulfilsDocumentId);
-        if (!request || !canReadDocument(s, request))
+        if (!request || !(await canReadDocument(s, request, db)))
           fail(404, "Solicitud no encontrada");
         if (
           request.id === provided ||
@@ -711,11 +858,6 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
           );
         if (["revisado", "firmado"].includes(values.status) && !old.storageId)
           fail(422, "Incorpora primero el archivo firmado");
-        if (!canConfigure(s.role) && old.uploadedBy !== s.userId)
-          fail(
-            403,
-            "Solo el autor o un administrador puede modificar el documento",
-          );
         if (
           old.entityType !== values.entityType ||
           old.entityId !== values.entityId
@@ -790,5 +932,6 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
       source: "dueno",
       actorUserId: s.userId,
     });
+  if (portfolioChanged) publish(org, { type: "portfolio.changed", data: {} });
   return result;
 }

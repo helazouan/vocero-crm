@@ -1,6 +1,6 @@
 # Vocero CRM
 
-Este fork incorpora gestión inmobiliaria en la versión 2.4.0: inmuebles,
+Este fork incorpora gestión inmobiliaria en la versión 2.5.0: inmuebles,
 compradores/propietarios, operaciones, visitas, contratos y documentos cifrados,
 además del trabajo diario y copias de expedientes. Consulta la
 [guía inmobiliaria](docs/gestion-inmobiliaria.md) y la
@@ -913,3 +913,5 @@ aprender a convertirte en Meta Tech Provider y monetizar con tu agencia de IA?
 de producción (webhook firmado, ingesta idempotente, cifrado de tokens) vienen
 de un proyecto de referencia privado en producción, portados y simplificados
 para este repo.
+
+Permisos por asesor: [cartera y acceso a expedientes](docs/permisos-por-asesor.md).

@@ -1,3 +1,4 @@
+import { assertConversationAccess } from "@/server/portfolio/access";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { canConfigure } from "@/lib/auth/roles";
@@ -24,6 +25,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const body = await parseBody(req, patchSchema);
   if (!body.ok) return body.response;
 
@@ -70,6 +72,7 @@ export const DELETE = withAuth(async (session, req: Request, ctx: Params) => {
     );
   }
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const alcance =
     new URL(req.url).searchParams.get("contacto") === "1" ? "contacto" : "hilo";
 

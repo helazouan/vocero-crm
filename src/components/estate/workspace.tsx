@@ -136,6 +136,10 @@ export function EstateWorkspace({ view }: { view: EstateView }) {
     label: "Asesor responsable",
     kind: "select",
     options: teamOptions,
+    readonly: !data.canManage,
+    help: data.canManage
+      ? "Solo dirección puede cambiar la cartera del cliente."
+      : "La asignación de cartera la gestiona dirección.",
   };
   const propertyFields: Field[] = [
     { key: "reference", label: "Referencia", required: true },
@@ -446,7 +450,7 @@ export function EstateWorkspace({ view }: { view: EstateView }) {
                 : "Gestiona la actividad de tu inmobiliaria y abre cada expediente."}
           </p>
         </div>
-        {view === "properties" && (
+        {view === "properties" && data.canManage && (
           <Button onClick={newProperty}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo inmueble
@@ -459,6 +463,12 @@ export function EstateWorkspace({ view }: { view: EstateView }) {
           <Button onClick={() => newDeal()}>Nueva operación</Button>
         )}
       </header>
+      {!data.canManage && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Tu cartera: solo puedes ver y gestionar los clientes que tienes
+          asignados y sus documentos. Dirección gestiona las asignaciones.
+        </p>
+      )}
       {error && (
         <div role="alert" className="mb-4 text-destructive">
           {error}{" "}
@@ -492,27 +502,29 @@ export function EstateWorkspace({ view }: { view: EstateView }) {
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h2 className="text-xl font-semibold">{selectedTitle}</h2>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setEditor({
-                    operation: activeEntity!,
-                    title: "Editar ficha",
-                    initial: p ?? c ?? deal!,
-                    fields: p
-                      ? propertyFields
-                      : c
-                        ? clientFields(true)
-                        : dealFields.map((f) =>
-                            f.key === "propertyId" || f.key === "contactId"
-                              ? { ...f, readonly: true }
-                              : f,
-                          ),
-                  })
-                }
-              >
-                Editar ficha
-              </Button>
+              {(!p || data.canManage) && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setEditor({
+                      operation: activeEntity!,
+                      title: "Editar ficha",
+                      initial: p ?? c ?? deal!,
+                      fields: p
+                        ? propertyFields
+                        : c
+                          ? clientFields(true)
+                          : dealFields.map((f) =>
+                              f.key === "propertyId" || f.key === "contactId"
+                                ? { ...f, readonly: true }
+                                : f,
+                            ),
+                    })
+                  }
+                >
+                  Editar ficha
+                </Button>
+              )}
             </div>
             {p && (
               <div className="mt-4 grid gap-4 md:grid-cols-2">

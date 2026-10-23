@@ -5,6 +5,21 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.5.0 — Cartera por asesor
+
+- Cada asesor consulta y gestiona únicamente clientes asignados, documentos,
+  conversaciones, operaciones, visitas y seguimientos. Propietario/administrador
+  conserva acceso completo y asigna las carteras; sin asignación, solo dirección.
+- Los documentos siguen al cliente aunque cambie su asesor o autor. Se comprueban
+  archivos originales y reenvíos, referencias y acceso por URL/API directa.
+- Nuevos clientes del asesor se asignan automáticamente. Reasignar invalida las
+  pantallas abiertas y SSE consulta la cartera vigente antes de entregar eventos.
+- Catálogo inmobiliario compartido sin titulares ajenos; edición de inmuebles,
+  importación, resultados globales, laboratorio y configuración para dirección.
+- Actualizar desde 2.4.0: copia de PostgreSQL, medios y claves; reconstruir desde
+  código. Sin migración nueva. Revisar responsables de clientes existentes:
+  los no asignados quedan solo en dirección. No hay imagen del fork publicada.
+
 ## 2.4.0 — 2026-10-23 (fork, instalación desde código)
 
 - Ficha inmobiliaria al recibir una entrada por WhatsApp y recepción de documentos

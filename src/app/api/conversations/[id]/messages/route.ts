@@ -1,3 +1,4 @@
+import { assertConversationAccess } from "@/server/portfolio/access";
 import {
   MAX_TEXT_CHARS_ANY_CHANNEL,
   TEXT_TOO_LONG_ANY_CHANNEL,
@@ -15,6 +16,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export const GET = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const row = await getConversation(session.organizationId, id);
   if (!row) return apiError(404, "not_found", "Conversación no encontrada");
 
@@ -97,6 +99,7 @@ const SEND_ERROR_STATUS: Record<SendError["code"], number> = {
 
 export const POST = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const body = await parseBody(req, sendSchema);
   if (!body.ok) return body.response;
 

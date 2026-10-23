@@ -1,3 +1,4 @@
+import { contactScope } from "@/server/portfolio/access";
 import { asc, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
 import { apiError, withAuth } from "@/lib/api";
@@ -14,6 +15,7 @@ export const GET = withAuth(async (session, req: Request) => {
     dueAt: schema.lead.nextActionAt, completedAt: schema.lead.nextActionCompletedAt })
     .from(schema.lead).innerJoin(schema.contact, eq(schema.contact.id, schema.lead.contactId))
     .where(scoped(schema.lead.organizationId, session.organizationId,
+      contactScope(session, schema.lead.contactId),
       parsed.data.leadId ? eq(schema.lead.id, parsed.data.leadId) : isNotNull(schema.lead.nextActionAt)))
     .orderBy(asc(schema.lead.nextActionAt), asc(schema.lead.id));
   return Response.json({ followUps: rows }, { headers: { "Cache-Control": "no-store" } });

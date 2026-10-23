@@ -1,3 +1,4 @@
+import { assertLeadAccess } from "@/server/portfolio/access";
 import { eq, isNull } from "drizzle-orm";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
@@ -9,6 +10,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export const PUT = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertLeadAccess(session, id);
   const body = await parseBody(req, followUpInput);
   if (!body.ok) return body.response;
   const data = body.data;

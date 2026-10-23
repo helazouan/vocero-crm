@@ -393,7 +393,7 @@ try {
   assert.equal(
     (
       await api("/api/settings/team", {
-        name: "Asesor sin acceso",
+        name: "Asesor de Beta",
         email: "documentos-member@example.test",
         password: "Pruebas-051-equipo!",
       })
@@ -426,6 +426,11 @@ try {
       visibility: "equipo",
     }),
   );
+  cookie = memberCookie;
+  assert.equal((await download(docB.id)).status, 404);
+  cookie = ownerCookie;
+  const [advisor] = await sql`select id from "user" where email='documentos-member@example.test'`;
+  await save({ ...b, role: "comprador", operation: "client", assignedUserId: advisor.id });
   cookie = memberCookie;
   assert.equal((await download(docB.id)).status, 200);
   assert.equal(

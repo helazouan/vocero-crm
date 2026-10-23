@@ -336,7 +336,7 @@ try {
     });
     return cookie;
   })();
-  assert.equal((await estate()).data.documents.length, 1);
+  assert.equal((await estate()).data.documents.length, 0);
   assert.equal(
     (
       await estate({
@@ -346,7 +346,7 @@ try {
         visibility: "equipo",
       })
     ).status,
-    403,
+    404,
   );
   cookie = ownerCookie;
   await sql`insert into organization(id,name) values('org_estate_other','Otro negocio')`;
@@ -500,7 +500,7 @@ try {
     Baños: "2",
   };
   for (const [name, value] of Object.entries(uiProperty))
-    await dialog.getByLabel(name, { exact: false }).fill(value);
+    await dialog.getByLabel(name + " *", { exact: true }).fill(value);
   await page.route("**/api/estate", (route) =>
     route.request().method() === "POST"
       ? route.fulfill({

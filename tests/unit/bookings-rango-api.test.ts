@@ -46,7 +46,7 @@ vi.mock("@/server/agenda/settings", async (importOriginal) => {
 vi.mock("@/lib/db/tenant", () => ({
   scoped: (_col: unknown, organizationId: string, ...conditions: unknown[]) => ({
     organizationId,
-    conditions,
+    conditions: conditions.filter(c => c !== undefined),
   }),
 }));
 vi.mock("drizzle-orm", async (importOriginal) => {

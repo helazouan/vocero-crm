@@ -9,7 +9,8 @@ export const GET = withAuth(async (session, req: Request) => {
   const since = sinceParam ? new Date(sinceParam) : undefined;
   const conversations = await listConversations(
     session.organizationId,
-    since && !Number.isNaN(since.getTime()) ? since : undefined
+    since && !Number.isNaN(since.getTime()) ? since : undefined,
+    session
   );
   return Response.json({ conversations });
 });

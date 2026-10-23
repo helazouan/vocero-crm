@@ -47,10 +47,12 @@ copia excesiva o un fallo de descarga deja una incidencia visible; no se afirma 
 el documento se ha archivado. «Reintentar incorporación» recupera una descarga
 fallida sin crear otra solicitud. También puede incorporarlo el asesor manualmente.
 
-Los entrantes quedan restringidos a administradores. El autor de una carga manual
-puede consultar sus documentos restringidos; un administrador puede compartirlos
-explícitamente con el equipo. El original del chat respeta esos permisos. Las
-versiones conservan sus permisos propios. Descargar requiere sesión y organización.
+Desde 2.5.0, dirección y el asesor responsable del cliente consultan y gestionan
+sus documentos, incluidos los entrantes de WhatsApp. Un asesor ajeno no obtiene
+acceso aunque figure como autor de una versión antigua o el documento tuviera
+visibilidad Equipo. El original del chat comprueba también la cartera. Los
+archivos sin titular identificable quedan en dirección. Detalle y reasignación:
+[permisos por asesor](permisos-por-asesor.md).
 
 El Laboratorio no incorpora documentos a expedientes reales. Los mensajes salientes
 no se archivan como documentos entrantes. Esta recepción no activa el agente ni

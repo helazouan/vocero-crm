@@ -95,10 +95,12 @@ export function documentFields(data: EstateData): Field[] {
       label: "Acceso al documento",
       kind: "select",
       required: true,
+      readonly: true,
       options: [
-        { value: "restringido", label: "Restringido: autor y administradores" },
-        { value: "equipo", label: "Todo el equipo" },
+        { value: "restringido", label: "Propietario y asesor responsable" },
+        { value: "equipo", label: "Propietario y asesor responsable" },
       ],
+      help: "El acceso depende de la cartera del cliente. Otros asesores no pueden consultar este archivo.",
     },
     {
       key: "dueAt",
@@ -258,29 +260,36 @@ export function Dossier({
                     <p className="text-xs text-muted-foreground">
                       {documentTypeLabel(d.documentType)} · v{d.version}
                       {hasNext ? " · Versión anterior" : ""} · {label(d.status)}{" "}
-                      · {label(d.visibility)}
+                      · Propietario y asesor responsable
                     </p>
                   </div>
-                  {!hasNext &&
-                    (data.canManage || d.uploadedBy === data.userId) && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          setEditor({
-                            operation: "document",
-                            title: "Editar documento",
-                            initial: {
-                              ...d,
-                              subjectContactId: documentSubject(d),
-                            },
-                            fields: documentFields(data),
-                          })
-                        }
-                      >
-                        Editar documento
-                      </Button>
-                    )}
+                  {!hasNext && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        setEditor({
+                          operation: "document",
+                          title: "Editar documento",
+                          initial: {
+                            ...d,
+                            subjectContactId: documentSubject(d),
+                          },
+                          fields: documentFields(data).map((f) =>
+                            f.key === "subjectContactId" && !data.canManage
+                              ? {
+                                  ...f,
+                                  readonly: true,
+                                  help: "Solo dirección puede trasladar un documento a otro cliente.",
+                                }
+                              : f,
+                          ),
+                        })
+                      }
+                    >
+                      Editar documento
+                    </Button>
+                  )}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {d.source === "whatsapp"
@@ -327,20 +336,17 @@ export function Dossier({
                     {d.intakeError}
                   </p>
                 )}
-                {!hasNext &&
-                  !d.hasFile &&
-                  d.sourceMediaAssetId &&
-                  (data.canManage || d.uploadedBy === data.userId) && (
-                    <Button
-                      className="mt-2"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy !== null}
-                      onClick={() => void retry(d.id)}
-                    >
-                      Reintentar incorporación
-                    </Button>
-                  )}
+                {!hasNext && !d.hasFile && d.sourceMediaAssetId && (
+                  <Button
+                    className="mt-2"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy !== null}
+                    onClick={() => void retry(d.id)}
+                  >
+                    Reintentar incorporación
+                  </Button>
+                )}
                 {d.dueAt && (
                   <p className="mt-2 text-sm">
                     Fecha límite:{" "}
@@ -359,28 +365,27 @@ export function Dossier({
                       {d.filename ?? "Descargar archivo"}
                     </a>
                   )}
-                  {!hasNext &&
-                    (data.canManage || d.uploadedBy === data.userId) && (
-                      <label className="cursor-pointer rounded border px-3 py-2 text-sm hover:bg-accent">
-                        {busy === d.id
-                          ? "Subiendo…"
-                          : d.hasFile
-                            ? "Subir nueva versión"
-                            : "Subir archivo"}
-                        <input
-                          className="sr-only"
-                          type="file"
-                          aria-label={`Archivo para ${d.title}`}
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          disabled={busy !== null}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) void upload(d.id, file);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                    )}
+                  {!hasNext && (
+                    <label className="cursor-pointer rounded border px-3 py-2 text-sm hover:bg-accent">
+                      {busy === d.id
+                        ? "Subiendo…"
+                        : d.hasFile
+                          ? "Subir nueva versión"
+                          : "Subir archivo"}
+                      <input
+                        className="sr-only"
+                        type="file"
+                        aria-label={`Archivo para ${d.title}`}
+                        accept="application/pdf,image/jpeg,image/png,image/webp"
+                        disabled={busy !== null}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void upload(d.id, file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
               </li>
             );
@@ -399,36 +404,38 @@ export function Dossier({
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Historial de actividad</h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              setEditor({
-                operation: "activity",
-                title: "Registrar actividad",
-                initial: { entityType: type, entityId: id, kind: "nota" },
-                fields: [
-                  {
-                    key: "kind",
-                    label: "Tipo de actividad",
-                    kind: "select",
-                    required: true,
-                    options: ["nota", "llamada", "reunión", "correo"].map(
-                      (value) => ({ value, label: label(value) }),
-                    ),
-                  },
-                  {
-                    key: "text",
-                    label: "Detalle de la actividad",
-                    kind: "textarea",
-                    required: true,
-                  },
-                ],
-              })
-            }
-          >
-            Registrar actividad
-          </Button>
+          {(data.canManage || type !== "property") && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setEditor({
+                  operation: "activity",
+                  title: "Registrar actividad",
+                  initial: { entityType: type, entityId: id, kind: "nota" },
+                  fields: [
+                    {
+                      key: "kind",
+                      label: "Tipo de actividad",
+                      kind: "select",
+                      required: true,
+                      options: ["nota", "llamada", "reunión", "correo"].map(
+                        (value) => ({ value, label: label(value) }),
+                      ),
+                    },
+                    {
+                      key: "text",
+                      label: "Detalle de la actividad",
+                      kind: "textarea",
+                      required: true,
+                    },
+                  ],
+                })
+              }
+            >
+              Registrar actividad
+            </Button>
+          )}
         </div>
         <ol className="mt-4 space-y-4">
           {events.map((e) => (

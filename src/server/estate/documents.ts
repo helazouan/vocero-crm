@@ -2,7 +2,6 @@ import { eq, sql } from "drizzle-orm";
 import { getDb, schema as S } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import type { SessionContext } from "@/lib/auth/session";
-import { canConfigure } from "@/lib/auth/roles";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { guardarMedia, leerMedia, borrarMedia } from "@/lib/storage/medios";
 import { activity, documentRow, estateId, fail } from "./service";
@@ -48,8 +47,7 @@ export async function uploadDocument(
         sql`select pg_advisory_xact_lock(hashtextextended(${s.organizationId + ":estate"},0))`,
       );
       const old = await documentRow(s, id, db);
-      if (!canConfigure(s.role) && old.uploadedBy !== s.userId)
-        fail(403, "Solo el autor o un administrador puede subir una versión");
+
       const [next] = await db
         .select({ id: S.estateDocument.id })
         .from(S.estateDocument)

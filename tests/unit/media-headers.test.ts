@@ -123,7 +123,7 @@ describe("mediaResponseHeaders (lo que ve el navegador)", () => {
   const siempre = (h: Record<string, string>) => {
     expect(h["x-content-type-options"]).toBe("nosniff");
     expect(h["content-security-policy"]).toBe("default-src 'none'; sandbox");
-    expect(h["cache-control"]).toBe("private, max-age=86400");
+    expect(h["cache-control"]).toBe("private, no-store");
   };
 
   it("una imagen va inline, con nosniff y CSP sandbox", () => {

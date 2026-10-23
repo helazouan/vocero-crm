@@ -1,3 +1,4 @@
+import { contactScope } from "@/server/portfolio/access";
 import { and, asc, eq } from "drizzle-orm";
 import { withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
@@ -31,7 +32,7 @@ export const GET = withAuth(async (session) => {
         eq(schema.conversation.isTest, false)
       )
     )
-    .where(scoped(schema.lead.organizationId, session.organizationId))
+    .where(scoped(schema.lead.organizationId, session.organizationId, contactScope(session, schema.lead.contactId)))
     .orderBy(asc(schema.lead.position));
 
   // La moneda del negocio viaja con el tablero: el cliente suma sus columnas y

@@ -16,20 +16,34 @@ const labels = (groups: { items: { label: string }[] }[]) =>
   groups.map((g) => g.items.map((i) => i.label));
 
 describe("barra lateral agrupada", () => {
-  it("con todo apagado y como miembro: Trabajo, Agente y Resultados", () => {
+  it("como miembro solo muestra Trabajo", () => {
     const groups = appNavGroups({ role: "member" });
-    expect(groups.map((g) => g.title)).toEqual(["Trabajo", "Agente", undefined]);
+    expect(groups.map((g) => g.title)).toEqual(["Trabajo"]);
     expect(labels(groups)).toEqual([
-      ["Mi jornada", "Inmuebles", "Clientes", "Operaciones", "Agenda", "Documentos", "Bandeja", "Pipeline", "Contactos", "Seguimientos"],
-      ["Agente", "Laboratorio"],
-      ["Resultados"],
+      [
+        "Mi jornada",
+        "Inmuebles",
+        "Clientes",
+        "Operaciones",
+        "Agenda",
+        "Documentos",
+        "Bandeja",
+        "Pipeline",
+        "Contactos",
+        "Seguimientos",
+      ],
     ]);
   });
 
   it("AGENDA añade Otras citas al final de Trabajo", () => {
     const [trabajo] = appNavGroups({ agenda: true, role: "member" });
     expect(trabajo!.items.map((i) => i.label)).toEqual([
-      "Mi jornada", "Inmuebles", "Clientes", "Operaciones", "Agenda", "Documentos",
+      "Mi jornada",
+      "Inmuebles",
+      "Clientes",
+      "Operaciones",
+      "Agenda",
+      "Documentos",
       "Bandeja",
       "Pipeline",
       "Contactos",
@@ -42,21 +56,32 @@ describe("barra lateral agrupada", () => {
   it("la guía de inicio abre el grupo Agente solo para quien configura", () => {
     for (const role of ["owner", "admin"]) {
       const agente = appNavGroups({ role })[1]!;
-      expect(agente.items[0]).toMatchObject({ href: "/onboarding", label: "Guía de inicio" });
+      expect(agente.items[0]).toMatchObject({
+        href: "/onboarding",
+        label: "Guía de inicio",
+      });
     }
     for (const role of ["member", null, undefined]) {
-      const agente = appNavGroups({ role })[1]!;
-      expect(agente.items.map((i) => i.href)).not.toContain("/onboarding");
+      expect(
+        appNavGroups({ role })
+          .flatMap((g) => g.items)
+          .map((i) => i.href),
+      ).not.toEqual(
+        expect.arrayContaining(["/onboarding", "/agent", "/lab", "/results"]),
+      );
     }
   });
 
   it("solo la Bandeja lleva el contador y Ajustes queda fuera de los grupos", () => {
-    const todos = appNavGroups({ agenda: true, role: "owner" }).flatMap((g) => g.items);
+    const todos = appNavGroups({ agenda: true, role: "owner" }).flatMap(
+      (g) => g.items,
+    );
     expect(todos.filter((i) => i.badge).map((i) => i.href)).toEqual(["/inbox"]);
     expect(todos.map((i) => i.href)).not.toContain("/settings");
     expect(SETTINGS_ITEM.href).toBe("/settings");
     // Cada entrada trae su icono: el renglón lo pinta sin condicionar.
-    for (const item of [...todos, SETTINGS_ITEM]) expect(item.icon).toBeDefined();
+    for (const item of [...todos, SETTINGS_ITEM])
+      expect(item.icon).toBeDefined();
   });
 
   it("una ruta hija activa su entrada, y /settings no activa nada más", () => {
@@ -74,7 +99,11 @@ describe("ajustes en tres secciones", () => {
 
   it("con todo apagado: Canales, Agente y Negocio con lo mínimo", () => {
     const sections = settingsSections({});
-    expect(sections.map((s) => s.title)).toEqual(["Canales", "Agente", "Negocio"]);
+    expect(sections.map((s) => s.title)).toEqual([
+      "Canales",
+      "Agente",
+      "Negocio",
+    ]);
     expect(links(sections)).toEqual({
       Canales: ["WhatsApp"],
       Agente: ["IA"],
@@ -95,7 +124,9 @@ describe("ajustes en tres secciones", () => {
       "Instagram",
     ]);
     expect(
-      links(settingsSections({ instagram: true, messenger: true, tiktok: true })).Canales
+      links(
+        settingsSections({ instagram: true, messenger: true, tiktok: true }),
+      ).Canales,
     ).toEqual(["Estado", "WhatsApp", "Instagram", "Messenger", "TikTok"]);
     expect(links(settingsSections({ agenda: true }))).toEqual({
       Canales: ["WhatsApp"],
@@ -133,15 +164,23 @@ describe("ajustes en tres secciones", () => {
         "/settings/templates",
         "/settings/team",
         "/settings/ads",
-      ].sort()
+      ].sort(),
     );
   });
 
   it("el Laboratorio no está en Ajustes: sigue en el menú principal", () => {
-    const hrefs = settingsSections({ agenda: true, atribucion: true, messenger: true })
+    const hrefs = settingsSections({
+      agenda: true,
+      atribucion: true,
+      messenger: true,
+    })
       .flatMap((s) => s.links)
       .map((l) => l.href);
     expect(hrefs).not.toContain("/lab");
-    expect(appNavGroups({ role: "owner" }).flatMap((g) => g.items).map((i) => i.href)).toContain("/lab");
+    expect(
+      appNavGroups({ role: "owner" })
+        .flatMap((g) => g.items)
+        .map((i) => i.href),
+    ).toContain("/lab");
   });
 });

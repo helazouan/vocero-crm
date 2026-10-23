@@ -1,3 +1,4 @@
+import { PortfolioError } from "@/server/portfolio/access";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { mutationSchema } from "@/lib/estate";
 import { EstateError, getEstateData, mutate } from "@/server/estate/service";
@@ -13,6 +14,7 @@ export const POST = withAuth(async (s, req: Request) => {
   try {
     return Response.json(await mutate(s, mutationSchema.parse(parsed.data)));
   } catch (err) {
+    if (err instanceof PortfolioError) return apiError(404, "not_found", err.message);
     if (err instanceof EstateError)
       return apiError(err.status, "estate_error", err.message);
     return apiError(500, "internal", "No se pudo guardar. Reinténtalo");

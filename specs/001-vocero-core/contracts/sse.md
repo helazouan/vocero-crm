@@ -1,6 +1,6 @@
 # Contrato: Canal SSE de la bandeja
 
-Ruta: `GET /api/events` (autenticada por sesión; scope = organización del usuario).
+Ruta: `GET /api/events` (autenticada por sesión; scope = organización y cartera del usuario).
 `export const dynamic = 'force-dynamic'`.
 
 Headers de respuesta (obligatorios, exactos):
@@ -25,3 +25,15 @@ Connection: keep-alive
   reconexión. EventSource reconecta solo (retry por defecto).
 - **Bus interno**: EventEmitter in-process por organización (`server/events`); publicar
   tras commit de BD.
+
+## Cartera por asesor (052)
+
+Propietario/administrador recibe los eventos del negocio. Miembros reciben solo
+eventos asociados a sus clientes actualmente asignados; no reciben Laboratorio.
+Se consulta la membresía y asignación actuales en cada entrega, también en streams
+abiertos antes de una reasignación. Lo no autorizable se omite.
+
+Evento aditivo `portfolio.changed` — `{}`: invalida la vista de los miembros cuando
+dirección cambia una asignación. No contiene identificadores ni información del
+cliente. El front recarga para retirar expedientes revocados e incorporar nuevos.
+Las formas de los eventos anteriores y los headers se conservan.

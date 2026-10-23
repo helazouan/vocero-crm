@@ -1,5 +1,4 @@
 import { withAuth, apiError } from "@/lib/api";
-import { canConfigure } from "@/lib/auth/roles";
 import { documentRow, EstateError } from "@/server/estate/service";
 import { ensureAssetAvailable } from "@/server/whatsapp/media";
 import { incorporateIncomingDocument } from "@/server/estate/incoming-documents";
@@ -8,12 +7,6 @@ export const POST = withAuth(
   async (s, _req: Request, ctx: { params: Promise<{ id: string }> }) => {
     try {
       const doc = await documentRow(s, (await ctx.params).id);
-      if (!canConfigure(s.role) && doc.uploadedBy !== s.userId)
-        return apiError(
-          403,
-          "forbidden",
-          "Solo el autor o un administrador puede recuperar el archivo",
-        );
       if (!doc.sourceMediaAssetId)
         return apiError(
           422,

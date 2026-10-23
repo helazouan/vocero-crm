@@ -1,3 +1,5 @@
+import { assertContactAccess, assertConversationAccess } from "@/server/portfolio/access";
+import { canConfigure } from "@/lib/auth/roles";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { parseRangeQuery } from "@/lib/time/calendar";
@@ -26,7 +28,7 @@ export const GET = withAuth(async (session, req: Request) => {
   const query = parseRangeQuery(url.searchParams.get("from"), url.searchParams.get("to"));
   if (!query.ok) return apiError(422, "invalid_range", query.message);
   if (!query.range) {
-    const bookings = await listBookings(session.organizationId);
+    const bookings = await listBookings(session.organizationId, undefined, session);
     return Response.json({ bookings });
   }
 
@@ -34,7 +36,8 @@ export const GET = withAuth(async (session, req: Request) => {
   const { bookings, truncated } = await listBookingsInRange(
     session.organizationId,
     query.range,
-    settings
+    settings,
+    session
   );
   return Response.json({
     bookings,
@@ -78,6 +81,7 @@ export const POST = withAuth(async (session, req: Request) => {
 
   try {
     if (body.data.kind === "block") {
+      if (!canConfigure(session.role)) return apiError(403, "forbidden", "Solo dirección puede crear bloqueos generales");
       const block = await createBlock({
         organizationId: session.organizationId,
         startUtc: body.data.startUtc,
@@ -87,6 +91,8 @@ export const POST = withAuth(async (session, req: Request) => {
       return Response.json({ booking: { id: block.id } }, { status: 201 });
     }
 
+    await assertContactAccess(session, body.data.contactId);
+    if (body.data.conversationId) await assertConversationAccess(session, body.data.conversationId);
     const result = await createSessionBooking({
       organizationId: session.organizationId,
       contactId: body.data.contactId,

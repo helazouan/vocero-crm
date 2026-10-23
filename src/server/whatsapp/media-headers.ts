@@ -125,7 +125,7 @@ export function mediaResponseHeaders(
     ),
     "x-content-type-options": "nosniff",
     "content-security-policy": "default-src 'none'; sandbox",
-    // El contenido de un asset es inmutable; privado por sesión.
-    "cache-control": "private, max-age=86400",
+    // El archivo es inmutable, pero la cartera y el permiso de descarga pueden cambiar.
+    "cache-control": "private, no-store",
   };
 }
