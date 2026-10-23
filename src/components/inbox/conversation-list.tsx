@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Inbox, Megaphone, Search, Sparkles, UserRound, X } from "lucide-react";
 import type { ConversationDto } from "@/lib/types";
 import { etiquetaDeOrigen, titularDeOrigen } from "@/lib/anuncios";
@@ -60,8 +61,14 @@ function InboxEmptyState({
       className="h-full"
       title="Sin conversaciones todavía"
       description={emptyInboxDescription(channels.map((ch) => CHANNEL_LABEL[ch]))}
-      action={
-        !failed && (
+      action={<div className="flex flex-col items-center gap-3">
+        <p className="text-xs text-muted-foreground">Puedes preparar tu trabajo mientras llegan los primeros mensajes.</p>
+        <Link href="/contacts" className="text-sm font-medium text-brand-text underline underline-offset-2">Abrir Contactos</Link>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/pipeline" className="underline underline-offset-2">Abrir Pipeline</Link>
+          <Link href="/follow-ups" className="underline underline-offset-2">Ver Seguimientos</Link>
+        </div>
+        {failed && <p role="alert" className="text-xs text-destructive">No se pudo cargar la demo. Puedes volver a intentarlo.</p>}
           <Button
             size="sm"
             variant="outline"
@@ -71,8 +78,7 @@ function InboxEmptyState({
             <Sparkles className="h-4 w-4" strokeWidth={1.7} />
             {seeding ? "Cargando demo…" : "Cargar datos de demostración"}
           </Button>
-        )
-      }
+      </div>}
     />
   );
 }
@@ -83,6 +89,8 @@ export function ConversationList({
   selectedId,
   onSelect,
   onSeeded,
+  error = "",
+  onRetry,
 }: {
   conversations: ConversationDto[] | null;
   /** Canales encendidos en esta instancia (ADR-001). */
@@ -90,6 +98,8 @@ export function ConversationList({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onSeeded: () => void;
+  error?: string;
+  onRetry?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "unread" | "anuncios">("all");
@@ -277,7 +287,11 @@ export function ConversationList({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {error && <div role="alert" className="space-y-2 border-b p-4 text-sm text-destructive">
+          <p>No se pudieron cargar las conversaciones. {error}</p>
+          <Button size="sm" variant="outline" onClick={onRetry}>Reintentar conversaciones</Button>
+        </div>}
+        {loading && error ? null : loading ? (
           <p className="p-6 text-center text-xs text-text-3">Cargando…</p>
         ) : conversations.length === 0 ? (
           <InboxEmptyState onSeeded={onSeeded} channels={channels} />

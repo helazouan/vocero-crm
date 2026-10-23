@@ -79,6 +79,11 @@ son internos y se actualizan cada minuto y al volver a la ventana; no envían
 WhatsApp, correo ni notificaciones push. Cada oportunidad conserva una acción:
 programar la siguiente sustituye la anterior.
 
+La Bandeja permite programar esa acción desde los detalles del cliente. Al
+guardar notas muestra confirmación o un error con el borrador conservado.
+Si falla la carga de conversaciones o mensajes, puedes reintentar desde el
+aviso. Cuando está vacía ofrece accesos a Contactos, Pipeline y Seguimientos.
+
 La actualización 2.2.0 añade la migración `0023_seguimiento_comercial.sql`.
 Para actualizar otra copia desde el código, ejecuta `npm run db:migrate` antes
 de arrancarla. En esta instalación ya está aplicada y hay una copia previa

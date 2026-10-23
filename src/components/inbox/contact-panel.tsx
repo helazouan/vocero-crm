@@ -32,6 +32,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { FichaPanel } from "@/components/ficha-panel";
 import { DeleteConversationDialog } from "./delete-conversation-dialog";
+import { requestJson } from "@/lib/request-json";
+import { NextAction } from "@/components/pipeline/next-action";
 
 const HANDOFF_LABELS: Record<string, string> = {
   cliente: "El cliente pidió un humano",
@@ -64,6 +66,9 @@ export function ContactPanel({
   const [ficha, setFicha] = useState<FichaDto>({});
   const [notesLoaded, setNotesLoaded] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [detailError, setDetailError] = useState("");
   const [stages, setStages] = useState<StageDto[]>([]);
   const [currentStageId, setCurrentStageId] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export function ContactPanel({
   // Carga inicial (incluye notas): se re-ejecuta al cambiar de contacto.
   const refetch = useCallback(async () => {
     void loadBrain();
+    setDetailError("");
     const [detail, stagesRes] = await Promise.all([
       fetch(`/api/contacts/${contactId}`).then((r) => (r.ok ? r.json() : null)),
       fetch("/api/pipeline/stages").then((r) => (r.ok ? r.json() : null)),
@@ -108,7 +114,8 @@ export function ContactPanel({
       setAnuncio(detail.anuncio ?? null);
     }
     if (stagesRes) setStages(stagesRes.stages);
-    setNotesLoaded(true);
+    setNotesLoaded(Boolean(detail));
+    if (!detail) setDetailError("No se pudieron cargar los detalles del contacto.");
   }, [contactId, loadBrain]);
 
   // Refetch en vivo (etapa/lead + quién responde) SIN tocar las notas, para
@@ -174,12 +181,16 @@ export function ContactPanel({
 
   async function saveNotes() {
     setSavingNotes(true);
-    await fetch(`/api/contacts/${contactId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ notes }),
-    }).catch(() => null);
-    setSavingNotes(false);
+    setNotesError(""); setNotesSaved(false);
+    try {
+      await requestJson(`/api/contacts/${contactId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      setNotesSaved(true);
+    } catch (err) { setNotesError((err as Error).message); }
+    finally { setSavingNotes(false); }
   }
 
   const currentIndex = stages.findIndex((s) => s.id === currentStageId);
@@ -200,6 +211,7 @@ export function ContactPanel({
       </header>
 
       <div className="flex-1 overflow-y-auto">
+        {detailError && <div role="alert" className="border-b p-4 text-sm text-destructive">{detailError}{" "}<Button size="sm" variant="outline" onClick={() => void refetch()}>Reintentar detalles</Button></div>}
         {/* Contacto */}
         <section className="border-b p-4">
           <div className="flex items-center gap-3">
@@ -325,6 +337,7 @@ export function ContactPanel({
           )}
         </section>
 
+        {leadId && <NextAction key={leadId} leadId={leadId} />}
         {/* Stepper de etapa */}
         {stages.length > 0 && leadId && (
           <section className="border-b p-4">
@@ -382,8 +395,9 @@ export function ContactPanel({
             rows={5}
             placeholder="Notas internas sobre este contacto…"
             value={notes}
-            disabled={!notesLoaded}
-            onChange={(e) => setNotes(e.target.value)}
+            aria-label="Notas internas"
+            disabled={!notesLoaded || savingNotes}
+            onChange={(e) => { setNotes(e.target.value); setNotesSaved(false); }}
           />
           <Button
             size="sm"
@@ -394,6 +408,8 @@ export function ContactPanel({
           >
             {savingNotes ? "Guardando…" : "Guardar notas"}
           </Button>
+          {notesError && <p role="alert" className="mt-2 text-sm text-destructive">{notesError}</p>}
+          {notesSaved && <p role="status" className="mt-2 text-sm text-success-text">Notas guardadas</p>}
         </section>
 
         {/* 026 — Al fondo y sin color de alarma: está a la mano de quien la

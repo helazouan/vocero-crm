@@ -5,6 +5,17 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.2.2 — 2026-10-23 (fork, instalación desde código)
+
+- Bandeja con errores de carga y reintento en conversaciones y mensajes.
+- Accesos a Contactos, Pipeline y Seguimientos desde la bandeja vacía.
+- Próxima acción en los detalles del cliente y guardado de notas con confirmación
+  o error visible, conservando el texto si falla.
+- El panel se reinicia al cambiar de conversación para no mezclar detalles.
+
+Actualizar desde 2.2.1: reconstruir y reiniciar, sin migraciones ni variables nuevas.
+Esta versión del fork se instala desde código; no se publica una imagen.
+
 ## 2.2.1 — 2026-10-23 (fork, instalación desde código)
 
 - `WEBHOOK_BASE_URL` permite un callback HTTPS independiente del acceso local.
