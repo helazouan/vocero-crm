@@ -13,6 +13,8 @@
 # --- Dependencias / build (cuando el starter ya tenga app encima) ---
 node_modules/
 .next/
+.next-e2e/
+.local/
 out/
 dist/
 build/

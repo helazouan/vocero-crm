@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const onboardingStatus = vi.hoisted(() => vi.fn());
 vi.mock("@/server/onboarding/status", () => ({ onboardingStatus }));
+vi.mock("@/server/onboarding/mode", () => ({ attentionMode: async () => "agent" }));
 
 import { GUIA_DEL_PAR, guideFirst, guideFrom } from "@/server/onboarding/guide";
 import type { ReadinessStep } from "@/server/onboarding/status";
@@ -38,6 +39,13 @@ const all = (overrides: Partial<Record<ReadinessStep["key"], ReadinessStep["stat
   );
 
 describe("guía de inicio", () => {
+  it("manual se completa sin perfil, IA ni cerebro y conserva WhatsApp", () => {
+    const status = { steps: all({ profile: "pending", ai: "pending", brain: "pending", calendar: "not_applicable" }), enabled: false };
+    expect(guideFrom(status, "manual")).toMatchObject({ complete: true, mode: "manual" });
+    expect(guideFrom(status, "manual").steps.map(s => s.key)).toEqual(["whatsapp"]);
+    status.steps = all({ whatsapp: "pending" });
+    expect(guideFrom(status, "manual").complete).toBe(false);
+  });
   it("son cinco pasos en el orden pedido: agente, IA, número, tu agente, agenda", () => {
     const guide = guideFrom({ steps: all(), enabled: false });
     expect(guide.steps.map((s) => s.key)).toEqual(["agent", "ai", "whatsapp", "brain", "calendar"]);

@@ -23,7 +23,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SOURCE_LABELS } from "@/server/contact-source";
-import { priorityRank } from "@/server/leads/priority";
+import { requestJson } from "@/lib/request-json";
 import { PriorityBadge } from "@/components/pipeline/priority-picker";
 import { ImportContactsDialog } from "./import-contacts-dialog";
 import { NewContactDialog } from "./new-contact-dialog";
@@ -41,6 +41,11 @@ export function ContactsClient() {
   const [importando, setImportando] = useState(false);
   const [escribiendo, setEscribiendo] = useState<ContactDto | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const requestId = useRef(0);
 
   // Mismo rescate que en la Bandeja: lo tecleado antes de que hidrate el JS
   // se perdía en silencio. Ver conversation-list.tsx.
@@ -59,34 +64,42 @@ export function ContactsClient() {
   }, []);
 
   const refetch = useCallback(async () => {
+    const id = ++requestId.current;
+    setLoading(true);
+    setError("");
     const params = new URLSearchParams();
+    params.set("page", String(page));
     if (query.trim()) params.set("q", query.trim());
     if (stage !== "all") params.set("stage", stage);
     if (showArchived) params.set("archived", "true");
-    const res = await fetch(`/api/contacts?${params}`).catch(() => null);
-    if (!res?.ok) return;
-    const data = (await res.json()) as { contacts: ContactDto[] };
-    // A quién llamar primero: alta arriba, sin prioridad al final. El orden lo
-    // decide esta lista, no el servidor, porque es una preferencia de trabajo y
-    // no un dato del contacto.
-    setContacts(
-      [...data.contacts].sort(
-        (a, b) => priorityRank(a.priority ?? null) - priorityRank(b.priority ?? null)
-      )
-    );
-  }, [query, stage, showArchived]);
+    try {
+      const data = await requestJson<{ contacts: ContactDto[]; total: number }>(`/api/contacts?${params}`);
+      if (id !== requestId.current) return;
+      if (page > 1 && (page - 1) * 50 >= data.total) {
+        setPage(Math.max(1, Math.ceil(data.total / 50)));
+        return;
+      }
+      setContacts(data.contacts);
+      setTotal(data.total);
+    } catch (err) {
+      if (id === requestId.current) setError((err as Error).message);
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  }, [query, stage, showArchived, page]);
 
   useEffect(() => {
+    const requests = requestId;
     const t = setTimeout(() => void refetch(), 250);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); requests.current++; };
   }, [refetch]);
 
   async function patch(id: string, body: Record<string, unknown>) {
-    await fetch(`/api/contacts/${id}`, {
+    await requestJson(`/api/contacts/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
-    }).catch(() => null);
+    });
     void refetch();
   }
 
@@ -109,7 +122,7 @@ export function ContactsClient() {
             <input
               type="checkbox"
               checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
+              onChange={(e) => { setPage(1); setShowArchived(e.target.checked); }}
               className="accent-primary"
             />
             Ver archivados
@@ -117,7 +130,7 @@ export function ContactsClient() {
           {stages.length > 0 && (
             <select
               value={stage}
-              onChange={(e) => setStage(e.target.value)}
+              onChange={(e) => { setPage(1); setStage(e.target.value); }}
               aria-label="Filtrar por etapa del embudo"
               className="h-9 rounded-md border border-input bg-card px-2 text-sm"
             >
@@ -136,7 +149,7 @@ export function ContactsClient() {
               placeholder="Buscar por nombre o teléfono…"
               aria-label="Buscar contacto"
               defaultValue=""
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setPage(1); setQuery(e.target.value); }}
               className="w-full pl-8 sm:w-72"
             />
           </div>
@@ -144,7 +157,8 @@ export function ContactsClient() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {contacts.length === 0 ? (
+        {error && <div role="alert" className="mb-4 text-sm text-destructive">{error} <Button variant="outline" size="sm" onClick={() => void refetch()}>Reintentar</Button></div>}
+        {loading ? <p role="status">Cargando contactos…</p> : error ? null : contacts.length === 0 ? (
           query.trim() || stage !== "all" ? (
             <EmptyState
               icon={Search}
@@ -240,7 +254,7 @@ export function ContactsClient() {
                     variant="ghost"
                     size="icon"
                     aria-label={c.archivedAt ? "Desarchivar" : "Archivar"}
-                    onClick={() => void patch(c.id, { archived: !c.archivedAt })}
+                    onClick={() => void patch(c.id, { archived: !c.archivedAt }).catch((err: Error) => setError(err.message))}
                   >
                     {c.archivedAt ? (
                       <ArchiveRestore className="h-4 w-4" />
@@ -254,6 +268,11 @@ export function ContactsClient() {
           </ul>
         )}
       </div>
+      <nav aria-label="Paginación de contactos" className="flex items-center justify-between gap-2 border-t p-4 text-sm">
+        <Button variant="outline" disabled={loading || page === 1} onClick={() => setPage(page - 1)}>Anterior</Button>
+        <span>Página {page} de {Math.max(1, Math.ceil(total / 50))} · {total} contactos</span>
+        <Button variant="outline" disabled={loading || page * 50 >= total} onClick={() => setPage(page + 1)}>Siguiente</Button>
+      </nav>
 
       {editing && (
         <EditDialog
@@ -332,14 +351,17 @@ function EditDialog({
   const [name, setName] = useState(contact.name);
   const [notes, setNotes] = useState(contact.notes ?? "");
   const [aiPaused, setAiPaused] = useState(contact.aiPaused ?? false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-overlay p-4"
-      onClick={onClose}
+      onClick={() => { if (!saving) onClose(); }}
     >
       <div
         className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-lg border bg-popover p-5 shadow-xl"
+        role="dialog" aria-modal="true" aria-label="Editar contacto"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-4 font-semibold">Editar contacto</h3>
@@ -382,24 +404,27 @@ function EditDialog({
           </label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" disabled={saving} onClick={onClose}>
             Cancelar
           </Button>
           <Button
-            disabled={!name.trim()}
-            onClick={() =>
-              void onSave({
+            disabled={saving || !name.trim()}
+            onClick={async () => {
+              setSaving(true); setError("");
+              try { await onSave({
                 name: name.trim(),
                 notes,
                 // Solo si cambió: mandarlo siempre reescribiría el interruptor
                 // de la Bandeja cada vez que alguien corrige un nombre.
                 ...(aiPaused !== (contact.aiPaused ?? false) ? { aiPaused } : {}),
-              })
-            }
+              }); } catch (err) { setError((err as Error).message); }
+              finally { setSaving(false); }
+            }}
           >
-            Guardar
+            {saving ? "Guardando…" : "Guardar"}
           </Button>
         </div>
+        {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
       </div>
     </div>
   );

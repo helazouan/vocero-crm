@@ -18,7 +18,7 @@ const RAIZ = path.resolve(import.meta.dirname, "..", "..");
 const pkg = JSON.parse(
   readFileSync(path.join(RAIZ, "package.json"), "utf8")
 ) as { version: string };
-const IMAGEN = `ghcr.io/kevinrivm/vocero-crm:${pkg.version}`;
+const IMAGEN = `ghcr.io/helazouan/vocero-crm:${pkg.version}`;
 
 // Un checkout de Windows con autocrlf deja CRLF: se normaliza para que las
 // expresiones con `\n` lean lo mismo en cualquier máquina.

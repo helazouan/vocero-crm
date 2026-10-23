@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { requestJson } from "@/lib/request-json";
 import { ArrowRight, ArrowUpRight, Check, Inbox, Power } from "lucide-react";
 import type { Guide, GuideStep } from "@/server/onboarding/guide";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,16 @@ export function OnboardingClient({
   // una palabra suelta, no como el nombre de alguien: se dice «tu agente».
   const agentReady = guide.steps.find((s) => s.key === "agent")?.done ?? false;
   const agente = (agentReady && agentName) || "tu agente";
+  const manual = guide.mode === "manual";
+
+  async function cambiarModo(mode: "manual" | "agent") {
+    setBusy(true); setError("");
+    try {
+      await requestJson("/api/onboarding/status", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode }) });
+      router.refresh();
+    } catch (err) { setError((err as Error).message); }
+    finally { setBusy(false); }
+  }
 
   async function encender() {
     setBusy(true);
@@ -80,6 +91,15 @@ export function OnboardingClient({
           </p>
         </header>
 
+        <fieldset disabled={busy} className="space-y-2">
+          <legend className="mb-2 font-semibold">Cómo quieres atender</legend>
+          <div className="flex flex-wrap gap-2">
+            <Button variant={manual ? "default" : "outline"} aria-pressed={manual} onClick={() => void cambiarModo("manual")}>Atención manual</Button>
+            <Button variant={!manual ? "default" : "outline"} aria-pressed={!manual} onClick={() => void cambiarModo("agent")}>Con agente de IA</Button>
+          </div>
+          <p className="text-sm text-muted-foreground">{manual ? "Contestas tú. Solo necesitas conectar WhatsApp. Puedes añadir IA más adelante." : "Configura el proveedor y conecta tu agente. Se activará únicamente cuando pulses Encender."}</p>
+        </fieldset>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div aria-label="Avance">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">
@@ -156,7 +176,13 @@ export function OnboardingClient({
               : "bg-card"
           )}
         >
-          {guide.enabled && guide.brainConnected ? (
+          {manual ? (
+            <>
+              <h2 className="font-semibold">{guide.complete ? "Tu bandeja manual está lista" : "Atiende desde la Bandeja"}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{guide.complete ? "Los mensajes de WhatsApp los atiendes tú y tu equipo." : "Conecta WhatsApp para recibir mensajes. Mientras tanto puedes preparar tus contactos y oportunidades."}</p>
+              <Link href="/inbox" className={cn(buttonVariants({ size: "sm" }), "mt-3")}>Ir a la Bandeja</Link>
+            </>
+          ) : guide.enabled && guide.brainConnected ? (
             <>
               <h2 className="font-semibold">
                 {agentReady && agentName

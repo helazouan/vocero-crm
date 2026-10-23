@@ -60,6 +60,7 @@ export function appNavGroups({
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
     { href: "/pipeline", label: "Pipeline", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
+    { href: "/follow-ups", label: "Seguimientos", icon: ListChecks },
   ];
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.

@@ -10,10 +10,15 @@
 > ningún otro archivo**: Coolify descarga la imagen publicada y los secretos
 > viven como variables de la plataforma.
 
-**Imagen**: `ghcr.io/kevinrivm/vocero-crm:2.1.0` (GitHub Container Registry,
+**Fork 2.2.0:** construir desde `https://github.com/helazouan/vocero-crm`.
+La imagen de esta versión aún no está publicada. Las rutas que descargan una
+imagen requieren publicar primero el tag en este fork; para instalar ahora,
+usar la variante que construye desde código y aplicar las migraciones.
+
+**Imagen prevista**: `ghcr.io/helazouan/vocero-crm:2.2.0` (GitHub Container Registry,
 una etiqueta por versión, `linux/amd64`, escucha en el puerto `3000`).
 
-**Repositorio**: `https://github.com/kevinrivm/vocero-crm` (público, rama `main`,
+**Repositorio**: `https://github.com/helazouan/vocero-crm` (público, rama `main`,
 `Dockerfile` en la raíz). Hace falta para la Ruta B y para construir desde el
 código.
 
@@ -87,12 +92,12 @@ enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
    (`database` tipo `postgresql`), con la contraseña generada y base `vocero`.
    Anota su host interno (algo como `<uuid>:5432`).
 2. **Aplicación**: en el mismo proyecto, crea una app de tipo **Docker Image**
-   con la imagen `ghcr.io/kevinrivm/vocero-crm`, la etiqueta `2.1.0`, puerto
+   con la imagen `ghcr.io/helazouan/vocero-crm`, la etiqueta `2.2.0`, puerto
    expuesto `3000` y el dominio del usuario con HTTPS (MCP: `application`
    con `action: create_dockerimage`, el `project_uuid`, el
    `server_uuid` y el `environment_name` del proyecto,
-   `docker_registry_image_name: ghcr.io/kevinrivm/vocero-crm`,
-   `docker_registry_image_tag: 2.1.0`, `ports_exposes: "3000"`,
+   `docker_registry_image_name: ghcr.io/helazouan/vocero-crm`,
+   `docker_registry_image_tag: 2.2.0`, `ports_exposes: "3000"`,
    `domains: https://<dominio>` e `instant_deploy: false`). Coolify descarga
    la imagen: no hay repositorio, GitHub App ni deploy keys que configurar, ni
    build en el VPS. No la despliegues todavía: primero el volumen y las
@@ -115,7 +120,7 @@ enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
 6. **Despliega** y espera el healthcheck verde (`/api/health`; el start-period
    cubre las migraciones).
 7. **Verifica**: `https://<dominio>/api/health` responde
-   `{"ok":true,"version":"2.1.0",…}` y `https://<dominio>/login` carga. Si la
+   `{"ok":true,"version":"2.2.0",…}` y `https://<dominio>/login` carga. Si la
    respuesta trae `"mediaWritable"` (desde 1.5.0), `true`
    confirma que el volumen del paso 3 quedó bien montado.
 
@@ -124,7 +129,7 @@ enciende el agente en la pantalla Agente (solo se deja con Nea en línea).
 Para un VPS ARM (p. ej. Ampere o Graviton: la imagen es `linux/amd64` y ahí no
 corre) o para un fork con cambios propios. En el paso 2, en vez de la imagen,
 crea una app tipo **repositorio público** apuntando a
-`https://github.com/kevinrivm/vocero-crm` o al fork (rama `main`, build pack
+`https://github.com/helazouan/vocero-crm` (rama `main`, build pack
 `dockerfile`, puerto expuesto `3000`, el dominio del usuario con HTTPS; MCP:
 `application` con `action: create_public`) — no requiere GitHub App ni deploy
 keys. Los pasos 3 a 7 son iguales. El build corre en el VPS y tarda varios
@@ -140,7 +145,7 @@ migraciones corren solas al arrancar.
 ## Ruta B — docker compose (VPS con Docker)
 
 ```bash
-git clone https://github.com/kevinrivm/vocero-crm.git vocero && cd vocero
+git clone https://github.com/helazouan/vocero-crm.git vocero && cd vocero
 pnpm install && pnpm init-env --domain <dominio>   # .env con los secretos generados (Node 22 + pnpm)
 pnpm doctor                                         # cada ✗ dice cómo arreglarla; sale con 1 si algo falla
 docker compose up -d
@@ -158,7 +163,7 @@ docker compose up -d
   `BRAIN_HEALTH_URL` en el `.env` (valores en `docs/migrar-a-2.0.md`) y
   `docker compose up -d`.
 - Verifica: `docker compose ps` (tres servicios healthy, cuatro con Nea) y
-  `https://<dominio>/api/health` → `{"ok":true,"version":"2.1.0",…}` (`"mediaWritable":true` confirma el volumen).
+  `https://<dominio>/api/health` → `{"ok":true,"version":"2.2.0",…}` (`"mediaWritable":true` confirma el volumen).
 
 ## Cierre (obligatorio decirlo al usuario)
 
@@ -182,7 +187,7 @@ docker compose up -d
 - App unhealthy al arrancar → revisa logs del contenedor: casi siempre es una
   variable faltante (la validación de entorno lista cuál) o la BD inaccesible.
 - Coolify no puede descargar la imagen → revisa la etiqueta: va sin `v`
-  (`2.1.0`, no `v2.1.0`). En un VPS ARM la imagen no corre: usa la variante
+  (`2.2.0`, no `v2.2.0`). En un VPS ARM la imagen no corre: usa la variante
   que construye desde el código.
 - `ENCRYPTION_KEY` inválida → debe ser EXACTAMENTE 32 bytes en base64
   (44 caracteres): regénérala con `openssl rand -base64 32`.
