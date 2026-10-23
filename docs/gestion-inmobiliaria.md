@@ -81,3 +81,6 @@ una cuenta local PostgreSQL con permiso para crear bases y Chromium de Playwrigh
 La migración es aditiva. Haz una copia antes de `npm run db:migrate`. Las nuevas
 pantallas usan `/api/estate`; las APIs `/api/bookings`, `/api/bot/*`, webhooks y SSE
 conservan sus contratos. La agenda anterior, cuando AGENDA=on, aparece en Otras citas.
+
+La recepción y clasificación por cliente de la versión 2.4.0 se describen en
+[Documentación por cliente](documentacion-por-cliente.md).

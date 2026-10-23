@@ -1,4 +1,9 @@
 "use client";
+import {
+  currentDocuments,
+  documentSubject,
+  documentTypeLabel,
+} from "@/lib/estate-documents";
 /* Las imágenes del expediente requieren las cookies de la sesión local. */
 /* eslint-disable @next/next/no-img-element */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1057,15 +1062,27 @@ export function EstateWorkspace({ view }: { view: EstateView }) {
               "Estado del documento",
               status,
               setStatus,
-              OPTIONS(["pendiente", "revisado", "pendiente_firma", "firmado"]),
+              OPTIONS([
+                "pendiente",
+                "revisado",
+                "pendiente_firma",
+                "firmado",
+                "rechazado",
+              ]),
             )}
           </div>
           <ul className="space-y-3">
-            {data.documents
+            {currentDocuments(data.documents)
               .filter(
                 (d) =>
                   !ownDocs.has(d.id) &&
-                  matches(d.title, d.category, d.filename) &&
+                  matches(
+                    d.title,
+                    d.category,
+                    d.filename,
+                    documentTypeLabel(d.documentType),
+                    data.clients.find((c) => c.id === documentSubject(d))?.name,
+                  ) &&
                   (!status || d.status === status),
               )
               .map((d) => (
@@ -1076,13 +1093,14 @@ export function EstateWorkspace({ view }: { view: EstateView }) {
                   <div>
                     <h2 className="font-medium">{d.title}</h2>
                     <p className="text-sm text-muted-foreground">
-                      {label(d.category)} · v{d.version} · {label(d.status)} ·{" "}
+                      {documentTypeLabel(d.documentType)} · v{d.version} ·{" "}
+                      {label(d.status)} ·{" "}
                       {d.hasFile ? "Archivo incorporado" : "Archivo pendiente"}
                     </p>
                   </div>
                   <Link
                     className={linkClass}
-                    href={`/${d.entityType === "property" ? "properties" : d.entityType === "client" ? "clients" : "deals"}?id=${d.entityId}`}
+                    href={`/${documentSubject(d) ? "clients" : d.entityType === "property" ? "properties" : d.entityType === "client" ? "clients" : "deals"}?id=${documentSubject(d) ?? d.entityId}`}
                   >
                     Abrir expediente
                   </Link>

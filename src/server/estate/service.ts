@@ -1,3 +1,8 @@
+import {
+  categoryForDocumentType,
+  documentRoot,
+  documentSubject,
+} from "@/lib/estate-documents";
 import { normalizeMx } from "@/lib/meta/client";
 import { createLeadForContact } from "@/server/inbox/lead-activity";
 import { desc, eq, sql, and } from "drizzle-orm";
@@ -73,7 +78,7 @@ export async function activity(
 }
 export function canReadDocument(
   s: SessionContext,
-  doc: { visibility: string; uploadedBy: string },
+  doc: { visibility: string; uploadedBy: string | null },
 ) {
   return (
     canConfigure(s.role) ||
@@ -192,10 +197,33 @@ export async function getEstateData(s: SessionContext) {
       archivedAt: c.archivedAt,
       leadId: leads.find((l) => l.contactId === c.id)?.id ?? null,
     })),
-    documents: visibleDocs.map(({ storageId, ...d }) => ({
-      ...d,
-      hasFile: Boolean(storageId),
-    })),
+    documents: visibleDocs.map(({ storageId, ...d }) => {
+      const relatedDeal = deals.find(
+        (deal) =>
+          deal.id ===
+          (d.dealId ?? (d.entityType === "deal" ? d.entityId : null)),
+      );
+      const relatedProperty = properties.find(
+        (p) =>
+          p.id ===
+          (d.propertyId ??
+            relatedDeal?.propertyId ??
+            (d.entityType === "property" ? d.entityId : null)),
+      );
+      return {
+        ...d,
+        subjectContactId:
+          d.subjectContactId ??
+          (d.entityType === "client"
+            ? d.entityId
+            : (relatedDeal?.contactId ??
+              relatedProperty?.ownerContactId ??
+              null)),
+        propertyId: d.propertyId ?? relatedProperty?.id ?? null,
+        dealId: d.dealId ?? relatedDeal?.id ?? null,
+        hasFile: Boolean(storageId),
+      };
+    }),
     activity: events.filter(
       (e) => e.entityType !== "document" || allowedDocIds.has(e.entityId),
     ),
@@ -562,11 +590,109 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
     if (input.operation === "document") {
       const { operation: _op, id: provided, dueAt, ...values } = input;
       await requireEntity(db, org, values.entityType, values.entityId);
+      if (values.documentType !== "sin_clasificar")
+        values.category = categoryForDocumentType(values.documentType);
+      values.subjectContactId ??=
+        values.entityType === "client" ? values.entityId : null;
+      if (values.subjectContactId)
+        await requireEntity(db, org, "client", values.subjectContactId);
+      values.propertyId ??=
+        values.entityType === "property" ? values.entityId : null;
+      values.dealId ??= values.entityType === "deal" ? values.entityId : null;
+      if (values.propertyId)
+        await requireEntity(db, org, "property", values.propertyId);
+      if (values.dealId) {
+        const [linked] = await db
+          .select()
+          .from(S.estateDeal)
+          .where(
+            scoped(
+              S.estateDeal.organizationId,
+              org,
+              eq(S.estateDeal.id, values.dealId),
+            ),
+          );
+        if (!linked) fail(404, "Operación no encontrada");
+        values.subjectContactId ??= linked.contactId;
+        if (
+          values.subjectContactId &&
+          linked.contactId !== values.subjectContactId
+        ) {
+          const [home] = await db
+            .select({ owner: S.property.ownerContactId })
+            .from(S.property)
+            .where(
+              scoped(
+                S.property.organizationId,
+                org,
+                eq(S.property.id, linked.propertyId),
+              ),
+            );
+          if (home?.owner !== values.subjectContactId)
+            fail(422, "La operación corresponde a otro cliente");
+        }
+        if (values.propertyId && linked.propertyId !== values.propertyId)
+          fail(422, "La operación corresponde a otro inmueble");
+        values.propertyId = linked.propertyId;
+      }
+      if (values.status === "rechazado" && !values.reviewNote?.trim())
+        fail(422, "Indica qué debe corregirse en el documento");
+      if (
+        ["revisado", "firmado"].includes(values.status) &&
+        values.documentType === "sin_clasificar"
+      )
+        fail(422, "Clasifica el documento antes de validarlo");
+      const docs = await db
+        .select()
+        .from(S.estateDocument)
+        .where(scoped(S.estateDocument.organizationId, org));
+      if (values.fulfilsDocumentId && !provided)
+        fail(
+          422,
+          "Incorpora primero el archivo que corresponde a la solicitud",
+        );
+      if (values.fulfilsDocumentId) {
+        const request = docs.find((d) => d.id === values.fulfilsDocumentId);
+        if (!request || !canReadDocument(s, request))
+          fail(404, "Solicitud no encontrada");
+        if (
+          request.id === provided ||
+          request.storageId ||
+          request.fulfilsDocumentId ||
+          request.previousId ||
+          request.source !== "manual"
+        )
+          fail(422, "Selecciona una solicitud pendiente sin archivo");
+        if (
+          !values.subjectContactId ||
+          documentSubject(request) !== values.subjectContactId
+        )
+          fail(422, "La solicitud pertenece a otro cliente");
+        if (
+          request.documentType !== "sin_clasificar" &&
+          request.documentType !== values.documentType
+        )
+          fail(422, "El tipo del archivo no coincide con la solicitud");
+        if (
+          docs.some(
+            (d) =>
+              d.fulfilsDocumentId === request.id &&
+              (!provided ||
+                documentRoot(d.id, docs) !== documentRoot(provided, docs)),
+          )
+        )
+          fail(409, "La solicitud ya tiene otro documento recibido");
+      }
       const id = provided ?? estateId("doc");
-      if (values.status === "firmado" && !provided)
+      if (["revisado", "firmado"].includes(values.status) && !provided)
         fail(422, "Incorpora primero el archivo firmado");
       if (provided) {
         const old = await documentRow(s, id, db);
+        if (values.fulfilsDocumentId && !old.storageId)
+          fail(
+            422,
+            "Incorpora primero el archivo que corresponde a la solicitud",
+          );
         const [next] = await db
           .select({ id: S.estateDocument.id })
           .from(S.estateDocument)
@@ -583,7 +709,7 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
             409,
             "Esta versión ya está cerrada. Edita la última versión del documento",
           );
-        if (values.status === "firmado" && !old.storageId)
+        if (["revisado", "firmado"].includes(values.status) && !old.storageId)
           fail(422, "Incorpora primero el archivo firmado");
         if (!canConfigure(s.role) && old.uploadedBy !== s.userId)
           fail(
@@ -595,10 +721,38 @@ export async function mutate(s: SessionContext, input: EstateMutation) {
           old.entityId !== values.entityId
         )
           fail(422, "No se puede trasladar un documento a otro expediente");
+        if (documentSubject(old) !== values.subjectContactId) {
+          const root = documentRoot(old.id, docs);
+          for (const version of docs.filter(
+            (d) => d.id !== id && documentRoot(d.id, docs) === root,
+          )) {
+            await db
+              .update(S.estateDocument)
+              .set({
+                subjectContactId: values.subjectContactId,
+                fulfilsDocumentId: values.fulfilsDocumentId,
+                ...(version.entityType === "client" && values.subjectContactId
+                  ? { entityId: values.subjectContactId }
+                  : {}),
+                updatedAt: new Date(),
+              })
+              .where(
+                scoped(
+                  S.estateDocument.organizationId,
+                  org,
+                  eq(S.estateDocument.id, version.id),
+                ),
+              );
+          }
+        }
         await db
           .update(S.estateDocument)
           .set({
             ...values,
+            entityId:
+              values.entityType === "client"
+                ? (values.subjectContactId ?? values.entityId)
+                : values.entityId,
             dueAt: dueAt ? new Date(dueAt) : null,
             updatedAt: new Date(),
           })

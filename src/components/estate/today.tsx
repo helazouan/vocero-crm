@@ -1,4 +1,5 @@
 "use client";
+import { currentDocuments } from "@/lib/estate-documents";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -59,12 +60,13 @@ export function DailyWork({
           advisor),
   );
   const earlier = new Set(data.documents.map((d) => d.previousId));
-  const docs = data.documents.filter(
+  const docs = currentDocuments(data.documents).filter(
     (d) =>
       !earlier.has(d.id) &&
       (!d.hasFile ||
         d.status === "pendiente" ||
         d.status === "pendiente_firma" ||
+        d.status === "rechazado" ||
         (d.dueAt &&
           Date.parse(d.dueAt) < now.getTime() &&
           d.status !== "firmado")) &&

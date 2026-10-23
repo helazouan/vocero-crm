@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, notExists, sql } from "drizzle-orm";
+import { and, or, eq, gt, inArray, isNotNull, notExists, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { vaciarFicha } from "@/server/bot/ficha";
@@ -98,7 +98,7 @@ export async function eliminarConversacion(
           : table === schema.estateDeal ? eq(schema.estateDeal.contactId, contact.id)
           : table === schema.estateVisit ? eq(schema.estateVisit.contactId, contact.id)
           : table === schema.property ? eq(schema.property.ownerContactId, contact.id)
-          : and(eq(schema.estateDocument.entityType, "client"), eq(schema.estateDocument.entityId, contact.id));
+          : or(eq(schema.estateDocument.subjectContactId,contact.id),and(eq(schema.estateDocument.entityType, "client"), eq(schema.estateDocument.entityId, contact.id)));
         const [linked] = await tx.select({ id: table.id }).from(table)
           .where(scoped(table.organizationId, organizationId, relation)).limit(1);
         if (linked) return { ok: false, motivo: "expediente_vinculado" };

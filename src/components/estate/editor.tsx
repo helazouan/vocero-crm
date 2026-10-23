@@ -168,6 +168,9 @@ export function Editor({
                       ...v,
                       [f.key]: e.target.value,
                       ...(f.key === "entityType" ? { entityId: "" } : {}),
+                      ...(f.key === "subjectContactId"
+                        ? { fulfilsDocumentId: "", dealId: "" }
+                        : {}),
                     }))
                   }
                 >

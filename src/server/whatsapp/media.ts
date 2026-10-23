@@ -1,3 +1,4 @@
+import {encryptPrivateMedia,decryptPrivateMedia} from "@/lib/storage/private-media";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { getEnv } from "@/lib/env";
@@ -122,7 +123,7 @@ export async function saveMediaFile(
 
 /** Lee el binario, del bucket o del disco (037: en los dos sitios). */
 export async function readMediaFile(organizationId: string, assetId: string): Promise<Buffer> {
-  return leerMedia(organizationId, assetId);
+  return decryptPrivateMedia(await leerMedia(organizationId, assetId));
 }
 
 /**
@@ -212,18 +213,22 @@ export async function ensureAssetAvailable(
     .limit(1);
   const asset = rows[0];
   if (!asset || asset.organizationId !== organizationId) return null;
-  if (asset.fetchStatus === "available") return asset;
+  if (asset.fetchStatus === "available") {
+    await copyToClientFile(organizationId,assetId);return asset;
+  }
   if (!asset.waMediaId) return null; // location/contacts no tienen binario
 
   const creds = await getCredentialsByOrg(organizationId);
-  if (!creds) return null;
+  if (!creds) {await copyToClientFile(organizationId,assetId);return null;}
 
   try {
     const { data, mimeType, fileSize } = await downloadGraphMedia(
       creds.token,
       asset.waMediaId
     );
-    const storagePath = await saveMediaFile(organizationId, assetId, data, mimeType ?? undefined);
+    const {registerIncomingDocument}=await import("@/server/estate/incoming-documents");
+    const incoming=await registerIncomingDocument(organizationId,assetId);
+    const storagePath = await saveMediaFile(organizationId, assetId, incoming?encryptPrivateMedia(data):data, incoming?"application/octet-stream":mimeType ?? undefined);
     const updated = await db
       .update(schema.mediaAsset)
       .set({
@@ -236,6 +241,7 @@ export async function ensureAssetAvailable(
       })
       .where(eq(schema.mediaAsset.id, assetId))
       .returning();
+    await copyToClientFile(organizationId,assetId);
     return updated[0] ?? null;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -243,9 +249,14 @@ export async function ensureAssetAvailable(
       .update(schema.mediaAsset)
       .set({ fetchStatus: "failed", fetchError: message, updatedAt: new Date() })
       .where(eq(schema.mediaAsset.id, assetId));
+    await copyToClientFile(organizationId,assetId);
     console.warn(`[media] descarga del asset ${assetId} falló: ${message}`);
     return null;
   }
+}
+
+async function copyToClientFile(org:string,assetId:string){
+  try{const {incorporateIncomingDocument}=await import("@/server/estate/incoming-documents");await incorporateIncomingDocument(org,assetId);}catch{console.warn("[expediente] copia pendiente de recuperar",assetId);}
 }
 
 /* ---------- Subida a Graph (salientes) ---------- */

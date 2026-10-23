@@ -71,7 +71,10 @@ export async function uploadDocument(
         filename: file.name.replace(/[\r\n/\\]/g, "_").slice(0, 180),
         mime: file.type,
         size: file.size,
-        status: "revisado",
+        status: "pendiente",
+        intakeError: null,
+        reviewNote: null,
+        uploadedBy: s.userId,
         updatedAt: new Date(),
       };
       let resultId = id;
@@ -81,9 +84,12 @@ export async function uploadDocument(
           ...old,
           id: resultId,
           ...values,
-          status: ["contrato", "reserva"].includes(old.category)
-            ? "pendiente_firma"
-            : "revisado",
+          status: "pendiente",
+          reviewNote: null,
+          source: "manual",
+          sourceWaMessageId: null,
+          sourceMediaAssetId: null,
+          intakeError: null,
           previousId: id,
           version: old.version + 1,
           uploadedBy: s.userId,

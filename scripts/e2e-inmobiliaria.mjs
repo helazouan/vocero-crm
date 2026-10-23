@@ -248,6 +248,7 @@ try {
     entityType: "deal",
     entityId: dealId,
     title: "Contrato de prueba",
+    documentType: "compraventa",
     category: "contrato",
     status: "pendiente",
     visibility: "restringido",
@@ -536,8 +537,8 @@ try {
     .getByLabel("Título del documento", { exact: false })
     .fill("Fotografía del inmueble");
   await dialog
-    .getByLabel("Categoría", { exact: false })
-    .selectOption("fotografía");
+    .getByLabel("Tipo de documento", { exact: false })
+    .selectOption("fotografia");
   await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
   await page
     .getByRole("heading", { name: "Fotografía del inmueble", exact: true })

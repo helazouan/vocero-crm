@@ -5,6 +5,20 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.4.0 — 2026-10-23 (fork, instalación desde código)
+
+- Ficha inmobiliaria al recibir una entrada por WhatsApp y recepción de documentos
+  por cliente, con copia cifrada, origen y estado pendiente de revisión.
+- Tipos documentales, asociación a cliente/inmueble/operación, solicitudes concretas,
+  motivo de rechazo y versiones que vuelven a revisión. No se clasifican documentos
+  ni se valida su titular automáticamente.
+- Reintento de incorporación, control de duplicados por mensaje, permisos también
+  en el original del chat y almacenamiento local mediante sustitución atómica.
+- Copias compatibles con documentos de 2.3.0 y conservación de todos los vínculos.
+
+Actualizar con copia previa, migración aditiva 0025 y reconstrucción desde código.
+Guía en `docs/documentacion-por-cliente.md`. La descarga real requiere conectar Meta.
+
 ## 2.3.0 — 2026-10-23 (fork, instalación desde código)
 
 - Gestión de inmuebles con precios en euros, propietario, asesor, características,

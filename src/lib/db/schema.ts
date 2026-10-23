@@ -1368,6 +1368,16 @@ export const estateDocument = pgTable("estate_document", {
   organizationId: text("organization_id").notNull().references(() => organization.id),
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id").notNull(),
+  documentType: text("document_type").notNull().default("sin_clasificar"),
+  subjectContactId: text("subject_contact_id").references(() => contact.id),
+  propertyId: text("property_id").references(() => property.id),
+  dealId: text("deal_id").references(() => estateDeal.id),
+  fulfilsDocumentId: text("fulfils_document_id"),
+  source: text("source").notNull().default("manual"),
+  sourceWaMessageId: text("source_wa_message_id"),
+  sourceMediaAssetId: text("source_media_asset_id"),
+  intakeError: text("intake_error"),
+  reviewNote: text("review_note"),
   title: text("title").notNull(),
   category: text("category").notNull().default("otro"),
   status: text("status").notNull().default("pendiente"),
@@ -1379,10 +1389,10 @@ export const estateDocument = pgTable("estate_document", {
   mime: text("mime"),
   size: integer("size"),
   storageId: text("storage_id"),
-  uploadedBy: text("uploaded_by").notNull().references(() => user.id),
+  uploadedBy: text("uploaded_by").references(() => user.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-}, t => [index("estate_document_org_entity_idx").on(t.organizationId, t.entityType, t.entityId)]);
+}, t => [index("estate_document_org_entity_idx").on(t.organizationId, t.entityType, t.entityId), uniqueIndex("estate_document_org_source_wamid_uq").on(t.organizationId,t.sourceWaMessageId)]);
 
 export const estateActivity = pgTable("estate_activity", {
   id: text("id").primaryKey(),
@@ -1391,6 +1401,6 @@ export const estateActivity = pgTable("estate_activity", {
   entityId: text("entity_id").notNull(),
   kind: text("kind").notNull(),
   text: text("text").notNull(),
-  actorId: text("actor_id").notNull().references(() => user.id),
+  actorId: text("actor_id").references(() => user.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, t => [index("estate_activity_org_entity_idx").on(t.organizationId, t.entityType, t.entityId)]);

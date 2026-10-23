@@ -1,9 +1,10 @@
 # Vocero CRM
 
-Este fork incorpora gestión inmobiliaria en la versión 2.3.0: inmuebles,
+Este fork incorpora gestión inmobiliaria en la versión 2.4.0: inmuebles,
 compradores/propietarios, operaciones, visitas, contratos y documentos cifrados,
 además del trabajo diario y copias de expedientes. Consulta la
-[guía inmobiliaria](docs/gestion-inmobiliaria.md). Se instala desde código.
+[guía inmobiliaria](docs/gestion-inmobiliaria.md) y la
+[documentación por cliente](docs/documentacion-por-cliente.md). Se instala desde código.
 
 [![CI](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

@@ -135,6 +135,23 @@ export async function restoreBackup(
   // El contenido autenticado procede del exportador; se comprueba además su forma contra el esquema actual.
   for (const [name, table] of Object.entries(tables)) {
     const values = rows[name];
+    if (name === "documentos" && values)
+      for (const row of values) {
+        for (const key of [
+          "subjectContactId",
+          "propertyId",
+          "dealId",
+          "fulfilsDocumentId",
+          "sourceWaMessageId",
+          "sourceMediaAssetId",
+          "intakeError",
+          "reviewNote",
+        ])
+          row[key] ??= null;
+        row.documentType ??= "sin_clasificar";
+        row.source ??= "manual";
+      }
+
     if (!values) fail(422, "La copia está incompleta");
     counts[name] = values.length;
     const columns: Record<
@@ -233,6 +250,16 @@ export async function restoreBackup(
       (row.previousId && !has("documentos", row.previousId))
     )
       fail(422, "El documento no tiene expediente o versión anterior");
+  for (const row of rows.documentos!) {
+    if (row.subjectContactId && !has("contactos", row.subjectContactId))
+      fail(422, "Falta el cliente de un documento");
+    if (row.propertyId && !has("inmuebles", row.propertyId))
+      fail(422, "Falta el inmueble de un documento");
+    if (row.dealId && !has("operaciones", row.dealId))
+      fail(422, "Falta la operación de un documento");
+    if (row.fulfilsDocumentId && !has("documentos", row.fulfilsDocumentId))
+      fail(422, "Falta la solicitud de un documento");
+  }
   if (!confirm) return { counts };
   const written: string[] = [];
   const remap = new Map<string, string>();

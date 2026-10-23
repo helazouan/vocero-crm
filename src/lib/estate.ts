@@ -1,3 +1,4 @@
+import { DOCUMENT_TYPES } from "@/lib/estate-documents";
 import { wallClock, hhmm } from "@/lib/time/calendar";
 import { z } from "zod";
 import type * as S from "@/lib/db/schema";
@@ -40,6 +41,7 @@ export const DOCUMENT_STATES = [
   "revisado",
   "pendiente_firma",
   "firmado",
+  "rechazado",
 ] as const;
 export const DOCUMENT_CATEGORIES = [
   "contrato",
@@ -159,7 +161,13 @@ export const mutationSchema = z.discriminatedUnion("operation", [
     operation: z.literal("document"),
     id: id.optional(),
     title: text.min(1).max(180),
-    category: z.enum(DOCUMENT_CATEGORIES),
+    documentType: z.enum(DOCUMENT_TYPES).default("sin_clasificar"),
+    subjectContactId: nullableId,
+    propertyId: nullableId,
+    dealId: nullableId,
+    fulfilsDocumentId: nullableId,
+    reviewNote: optionalText,
+    category: z.enum(DOCUMENT_CATEGORIES).default("otro"),
     status: z.enum(DOCUMENT_STATES),
     visibility: z.enum(["equipo", "restringido"]),
     dueAt: z.string().datetime({ offset: true }).nullable().default(null),

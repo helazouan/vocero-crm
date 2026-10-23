@@ -1,28 +1,88 @@
 "use client";
+import {
+  DOCUMENT_TYPES,
+  documentTypeLabel,
+  documentSubject,
+  coveredRequests,
+  currentDocuments,
+} from "@/lib/estate-documents";
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Editor, type Field } from "./editor";
 import {
-  DOCUMENT_CATEGORIES,
   DOCUMENT_STATES,
   label,
   type EntityType,
   type EstateData,
 } from "@/lib/estate";
 import { requestJson } from "@/lib/request-json";
-export function documentFields(): Field[] {
+export function documentFields(data: EstateData): Field[] {
   return [
     { key: "title", label: "Título del documento", required: true },
     {
-      key: "category",
-      label: "Categoría",
+      key: "documentType",
+      label: "Tipo de documento",
       kind: "select",
       required: true,
-      options: DOCUMENT_CATEGORIES.map((value) => ({
+      options: DOCUMENT_TYPES.map((value) => ({
         value,
-        label: label(value),
+        label: documentTypeLabel(value),
       })),
     },
+    {
+      key: "subjectContactId",
+      label: "Cliente del documento",
+      kind: "select",
+      options: data.clients.map((c) => ({ value: c.id, label: c.name })),
+      help: "Identifica a quién corresponde el archivo. Revisa el titular si el remitente lo ha enviado para otra persona.",
+    },
+    {
+      key: "propertyId",
+      label: "Inmueble relacionado",
+      kind: "select",
+      options: data.properties.map((p) => ({
+        value: p.id,
+        label: p.reference + " · " + p.title,
+      })),
+    },
+    {
+      key: "dealId",
+      label: "Operación relacionada",
+      kind: "select",
+      options: data.deals.map((d) => ({
+        value: d.id,
+        label:
+          (data.properties.find((p) => p.id === d.propertyId)?.reference ??
+            "Inmueble") +
+          " · " +
+          (data.clients.find((c) => c.id === d.contactId)?.name ?? "Cliente"),
+      })),
+    },
+    {
+      key: "fulfilsDocumentId",
+      label: "Corresponde a una solicitud",
+      kind: "select",
+      options: (values) =>
+        data.documents
+          .filter(
+            (d) =>
+              !d.hasFile &&
+              d.source === "manual" &&
+              !d.fulfilsDocumentId &&
+              !d.previousId &&
+              documentSubject(d) === values.subjectContactId &&
+              d.id !== values.id,
+          )
+          .map((d) => ({ value: d.id, label: d.title })),
+      help: "Selecciona la solicitud concreta del mismo cliente después de incorporar el archivo.",
+    },
+    {
+      key: "reviewNote",
+      label: "Resultado de la revisión o motivo de rechazo",
+      kind: "textarea",
+    },
+
     {
       key: "status",
       label: "Estado del documento",
@@ -67,9 +127,17 @@ export function Dossier({
   } | null>(null);
   const [busy, setBusy] = useState<string | null>(null),
     [error, setError] = useState("");
+  const covered = coveredRequests(data.documents);
   const docs = data.documents.filter(
-    (d) => d.entityType === type && d.entityId === id,
+    (d) =>
+      !covered.has(d.id) &&
+      (type === "client"
+        ? documentSubject(d) === id
+        : (d.entityType === type && d.entityId === id) ||
+          (type === "property" ? d.propertyId === id : d.dealId === id)),
   );
+  const current = currentDocuments(docs);
+
   const relatedDeals = data.deals
     .filter((d) =>
       type === "property"
@@ -103,6 +171,20 @@ export function Dossier({
       setBusy(null);
     }
   }
+  async function retry(docId: string) {
+    setBusy(docId);
+    setError("");
+    try {
+      await requestJson(`/api/estate/documents/${docId}/retry`, {
+        method: "POST",
+      });
+      await reload();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-2">
       <section
@@ -121,11 +203,22 @@ export function Dossier({
                 initial: {
                   entityType: type,
                   entityId: id,
+                  documentType: "sin_clasificar",
+                  subjectContactId:
+                    type === "client"
+                      ? id
+                      : type === "deal"
+                        ? (data.deals.find((d) => d.id === id)?.contactId ??
+                          null)
+                        : (data.properties.find((p) => p.id === id)
+                            ?.ownerContactId ?? null),
+                  propertyId: type === "property" ? id : null,
+                  dealId: type === "deal" ? id : null,
                   category: "otro",
                   status: "pendiente",
                   visibility: "restringido",
                 },
-                fields: documentFields(),
+                fields: documentFields(data),
               })
             }
           >
@@ -135,6 +228,17 @@ export function Dossier({
         <p className="mt-2 text-xs text-muted-foreground">
           PDF, JPG, PNG o WebP · hasta 10 MiB · archivos cifrados. El estado de
           firma se registra manualmente.
+        </p>
+        <p className="mt-3 text-sm">
+          {current.filter((d) => !d.hasFile).length} solicitudes o archivos
+          pendientes ·{" "}
+          {current.filter((d) => d.hasFile && d.status === "pendiente").length}{" "}
+          por revisar · {current.filter((d) => d.status === "rechazado").length}{" "}
+          rechazados
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          «Añadir documento» registra lo que necesitas de este cliente; no envía
+          un mensaje. Al recibirlo, clasifícalo y vincúlalo a su solicitud.
         </p>
         {error && (
           <p role="alert" className="mt-3 text-sm text-destructive">
@@ -152,7 +256,7 @@ export function Dossier({
                   <div className="min-w-0">
                     <h3 className="break-words font-medium">{d.title}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {label(d.category)} · v{d.version}
+                      {documentTypeLabel(d.documentType)} · v{d.version}
                       {hasNext ? " · Versión anterior" : ""} · {label(d.status)}{" "}
                       · {label(d.visibility)}
                     </p>
@@ -166,8 +270,11 @@ export function Dossier({
                           setEditor({
                             operation: "document",
                             title: "Editar documento",
-                            initial: d,
-                            fields: documentFields(),
+                            initial: {
+                              ...d,
+                              subjectContactId: documentSubject(d),
+                            },
+                            fields: documentFields(data),
                           })
                         }
                       >
@@ -175,6 +282,65 @@ export function Dossier({
                       </Button>
                     )}
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {d.source === "whatsapp"
+                    ? "Recibido por WhatsApp"
+                    : "Carga o solicitud del asesor"}{" "}
+                  ·{" "}
+                  {new Date(d.createdAt).toLocaleString("es-ES", {
+                    timeZone: "Europe/Madrid",
+                  })}
+                  {documentSubject(d) && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      <Link
+                        className="underline"
+                        href={`/clients?id=${documentSubject(d)}`}
+                      >
+                        {data.clients.find((c) => c.id === documentSubject(d))
+                          ?.name ?? "Cliente"}
+                      </Link>
+                    </>
+                  )}
+                </p>
+                {d.source === "whatsapp" && d.status === "pendiente" && (
+                  <p className="mt-2 text-sm">
+                    Revisa el cliente, el tipo y el contenido antes de
+                    validarlo.
+                  </p>
+                )}
+                {d.fulfilsDocumentId && (
+                  <p className="mt-2 text-sm">
+                    Solicitud:{" "}
+                    {data.documents.find((r) => r.id === d.fulfilsDocumentId)
+                      ?.title ?? "Documento solicitado"}
+                  </p>
+                )}
+                {d.reviewNote && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm">
+                    Revisión: {d.reviewNote}
+                  </p>
+                )}
+                {d.intakeError && (
+                  <p role="alert" className="mt-2 text-sm text-destructive">
+                    {d.intakeError}
+                  </p>
+                )}
+                {!hasNext &&
+                  !d.hasFile &&
+                  d.sourceMediaAssetId &&
+                  (data.canManage || d.uploadedBy === data.userId) && (
+                    <Button
+                      className="mt-2"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy !== null}
+                      onClick={() => void retry(d.id)}
+                    >
+                      Reintentar incorporación
+                    </Button>
+                  )}
                 {d.dueAt && (
                   <p className="mt-2 text-sm">
                     Fecha límite:{" "}
@@ -274,7 +440,9 @@ export function Dossier({
                 {new Date(e.createdAt).toLocaleString("es-ES", {
                   timeZone: "Europe/Madrid",
                 })}{" "}
-                · {data.team.find((t) => t.id === e.actorId)?.name ?? "Equipo"}{" "}
+                ·{" "}
+                {data.team.find((t) => t.id === e.actorId)?.name ??
+                  "Recepción automática"}{" "}
                 · {e.kind}
               </p>
             </li>

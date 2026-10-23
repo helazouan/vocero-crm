@@ -17,6 +17,11 @@ const h = vi.hoisted(() => ({
   inserts: [] as { table: unknown; values: Record<string, unknown> }[],
 }));
 
+vi.mock("@/server/estate/incoming-documents", () => ({
+  ensureClientFile: vi.fn(async () => {}),
+  registerIncomingDocument: vi.fn(async () => null),
+}));
+
 vi.mock("@/lib/meta/client", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/meta/client")>();
   return { ...original, graphRequest: h.graphRequest };
