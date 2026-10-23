@@ -1,3 +1,4 @@
+import { assertContactAccess } from "@/server/portfolio/access";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
@@ -22,6 +23,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertContactAccess(session, id);
   const contact = await getContactById(session.organizationId, id);
   if (!contact) return apiError(404, "not_found", "Contacto no encontrado");
   const [stageRow, anuncio] = await Promise.all([
@@ -65,6 +67,7 @@ const patchSchema = z.object({
 
 export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertContactAccess(session, id);
   const body = await parseBody(req, patchSchema);
   if (!body.ok) return body.response;
 

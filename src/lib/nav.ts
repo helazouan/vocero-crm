@@ -1,5 +1,9 @@
 import {
   CalendarDays,
+  Building2,
+  Handshake,
+  LayoutDashboard,
+  Files,
   ChartColumn,
   FlaskConical,
   Inbox,
@@ -57,6 +61,12 @@ export function appNavGroups({
   role?: string | null;
 }): NavGroup[] {
   const trabajo: NavItem[] = [
+    { href: "/work", label: "Mi jornada", icon: LayoutDashboard },
+    { href: "/properties", label: "Inmuebles", icon: Building2 },
+    { href: "/clients", label: "Clientes", icon: Users },
+    { href: "/deals", label: "Operaciones", icon: Handshake },
+    { href: "/agenda", label: "Agenda", icon: CalendarDays },
+    { href: "/documents", label: "Documentos", icon: Files },
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
     { href: "/pipeline", label: "Pipeline", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
@@ -64,23 +74,41 @@ export function appNavGroups({
   ];
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.
-  if (agenda) trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });
+  if (agenda)
+    trabajo.push({
+      href: "/bookings",
+      label: "Otras citas",
+      icon: CalendarDays,
+    });
 
   const agente: NavItem[] = [];
   // Un miembro del equipo no puede hacer ninguno de los pasos de la guía.
   if (canConfigure(role)) {
-    agente.push({ href: "/onboarding", label: "Guía de inicio", icon: ListChecks });
+    agente.push({
+      href: "/onboarding",
+      label: "Guía de inicio",
+      icon: ListChecks,
+    });
   }
-  agente.push(
-    { href: "/agent", label: "Agente", icon: Sparkles },
-    { href: "/lab", label: "Laboratorio", icon: FlaskConical }
-  );
+  if (canConfigure(role))
+    agente.push(
+      { href: "/agent", label: "Agente", icon: Sparkles },
+      { href: "/lab", label: "Laboratorio", icon: FlaskConical },
+    );
 
   return [
     { title: "Trabajo", items: trabajo },
-    { title: "Agente", items: agente },
+    ...(agente.length ? [{ title: "Agente", items: agente }] : []),
     // 019 — Se mide al final: primero se atiende y se organiza.
-    { items: [{ href: "/results", label: "Resultados", icon: ChartColumn }] },
+    ...(canConfigure(role)
+      ? [
+          {
+            items: [
+              { href: "/results", label: "Resultados", icon: ChartColumn },
+            ],
+          },
+        ]
+      : []),
   ];
 }
 
@@ -124,8 +152,10 @@ export function settingsSections({
     canales.push({ href: "/settings/channels", label: "Estado" });
   }
   canales.push({ href: "/settings/whatsapp", label: "WhatsApp" });
-  if (instagram) canales.push({ href: "/settings/instagram", label: "Instagram" });
-  if (messenger) canales.push({ href: "/settings/messenger", label: "Messenger" });
+  if (instagram)
+    canales.push({ href: "/settings/instagram", label: "Instagram" });
+  if (messenger)
+    canales.push({ href: "/settings/messenger", label: "Messenger" });
   if (tiktok) canales.push({ href: "/settings/tiktok", label: "TikTok" });
 
   // #85 — el proveedor de IA se configura aquí; el entorno queda de respaldo.

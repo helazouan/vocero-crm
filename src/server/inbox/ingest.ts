@@ -180,6 +180,9 @@ async function attachMediaAsset(
       .update(schema.message)
       .set({ mediaAssetId: asset.id })
       .where(eq(schema.message.id, messageId));
+    if(["document","image"].includes(asset.kind)){
+      try{const {registerIncomingDocument}=await import("@/server/estate/incoming-documents");await registerIncomingDocument(organizationId,asset.id);}catch{console.warn("[expediente] recepción pendiente de recuperar",asset.id);}
+    }
     if (asset.fetchStatus === "pending") {
       // Descarga in-process, sin bloquear la ingesta; on-demand reintenta.
       // 044: al terminar se avisa a la bandeja, que pintó «descargando…».
@@ -536,6 +539,10 @@ export async function ingestInboundMessage(input: {
     .where(eq(schema.conversation.id, conversation.id));
 
   await onLeadActivity(organizationId, contact.id, waTimestamp);
+  if(contact.channel==="whatsapp"){
+    try{const {ensureClientFile}=await import("@/server/estate/incoming-documents");await ensureClientFile(organizationId,contact.id);}catch{console.warn("[expediente] ficha pendiente de completar",contact.id);}
+  }
+
 
   publish(organizationId, {
     type: "message.new",

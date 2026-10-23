@@ -1,3 +1,4 @@
+import { assertConversationAccess } from "@/server/portfolio/access";
 import { apiError, withAuth } from "@/lib/api";
 import { getConversation } from "@/server/inbox/queries";
 import { SendError, sendMediaMessage } from "@/server/inbox/send";
@@ -29,6 +30,7 @@ const SEND_ERROR_STATUS: Record<SendError["code"], number> = {
  */
 export const POST = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const conv = await getConversation(session.organizationId, id);
   if (!conv) return apiError(404, "not_found", "Conversación no encontrada");
 

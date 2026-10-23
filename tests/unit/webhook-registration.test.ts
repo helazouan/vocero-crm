@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const env = vi.hoisted(() => ({
   APP_BASE_URL: "https://crm.ejemplo.test/",
+  WEBHOOK_BASE_URL: undefined as string | undefined,
   META_WEBHOOK_VERIFY_TOKEN: "verify-token-xyz",
   META_GRAPH_BASE_URL: "https://graph.facebook.com",
   META_GRAPH_API_VERSION: "v25.0",
@@ -34,6 +35,13 @@ const opts = {
 };
 
 describe("la URL del webhook de esta instancia", () => {
+  afterEach(() => { env.WEBHOOK_BASE_URL = undefined; });
+  it("separa el callback público del origen de autenticación", () => {
+    env.WEBHOOK_BASE_URL = "https://tunel.ejemplo.test/";
+    expect(webhookUrl()).toBe("https://tunel.ejemplo.test/api/webhooks/wa/verify-token-xyz");
+    expect(env.APP_BASE_URL).toBe("https://crm.ejemplo.test/");
+    expect(webhookPath()).toBe("/api/webhooks/wa/verify-token-xyz");
+  });
   it("es APP_BASE_URL sin barra final + /api/webhooks/<canal>/<verify token>", () => {
     expect(webhookUrl()).toBe(URL_PROPIA);
     expect(webhookUrl("ig")).toBe("https://crm.ejemplo.test/api/webhooks/ig/verify-token-xyz");

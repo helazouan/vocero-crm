@@ -1,3 +1,4 @@
+import { assertContactAccess } from "@/server/portfolio/access";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
@@ -32,6 +33,7 @@ const bodySchema = z.object({
  */
 export const POST = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertContactAccess(session, id);
   const contact = await getContactById(session.organizationId, id);
   if (!contact) return apiError(404, "not_found", "Contacto no encontrado");
   if (!contact.phone && !contact.waIdentity) {

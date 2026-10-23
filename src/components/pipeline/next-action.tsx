@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { requestJson } from "@/lib/request-json";
 import { localDateTime, type FollowUp } from "@/lib/follow-ups";
@@ -43,6 +44,7 @@ export function NextAction({ leadId, onSaved }: { leadId: string; onSaved?: () =
 
   return <section className="space-y-3 border-b p-4" aria-label="Próxima acción">
     <h3 className="font-semibold">Próxima acción</h3>
+    {item&&<Link className="text-sm text-brand-text underline" href={`/clients?id=${item.contactId}`}>Ver expediente del cliente</Link>}
     {loading ? <p role="status">Cargando acción…</p> : <>
       {item?.completedAt && <p role="status" className="text-sm text-success-text">Completada. Puedes programar la siguiente.</p>}
       <form onSubmit={e => { e.preventDefault(); void save(); }} className="space-y-3">

@@ -1,3 +1,4 @@
+import { canConfigure } from "@/lib/auth/roles";
 import { redirect } from "next/navigation";
 import { getSessionOrNull } from "@/lib/auth/session";
 import { todayInTz } from "@/lib/time/slots";
@@ -21,6 +22,7 @@ export default async function ResultsPage() {
   // resuelve primero.
   const session = await getSessionOrNull();
   if (!session) redirect("/login");
+  if (!canConfigure(session.role)) redirect("/work");
   const [branding, timezone] = await Promise.all([
     getBranding(session.organizationId),
     businessTimezone(session.organizationId),

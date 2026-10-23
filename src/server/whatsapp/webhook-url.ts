@@ -3,8 +3,8 @@ import { getEnv } from "@/lib/env";
 /**
  * Dónde recibe esta instancia los webhooks de Meta.
  *
- * La URL es fija: `APP_BASE_URL` + `/api/webhooks/<canal>/<verify token>`. El
- * verify token hace de segmento secreto de la ruta (capa 1 del webhook) y es
+ * La URL usa WEBHOOK_BASE_URL si está definido, y APP_BASE_URL como respaldo.
+ * El verify token hace de segmento secreto de la ruta (capa 1 del webhook) y es
  * el mismo que Meta manda en el handshake, así que la URL se trata como una
  * contraseña y jamás se escribe entera en un log.
  *
@@ -21,7 +21,8 @@ export function webhookPath(channel: WebhookChannel = "wa"): string {
 
 /** URL pública completa del webhook de un canal. */
 export function webhookUrl(channel: WebhookChannel = "wa"): string {
-  const base = getEnv().APP_BASE_URL.replace(/\/$/, "");
+  const env = getEnv();
+  const base = (env.WEBHOOK_BASE_URL ?? env.APP_BASE_URL).replace(/\/$/, "");
   return `${base}${webhookPath(channel)}`;
 }
 

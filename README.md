@@ -1,5 +1,11 @@
 # Vocero CRM
 
+Este fork incorpora gestión inmobiliaria en la versión 2.5.1: inmuebles,
+compradores/propietarios, operaciones, visitas, contratos y documentos cifrados,
+además del trabajo diario y copias de expedientes. Consulta la
+[guía inmobiliaria](docs/gestion-inmobiliaria.md) y la
+[documentación por cliente](docs/documentacion-por-cliente.md). Se instala desde código.
+
 [![CI](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinrivm/vocero-crm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -907,3 +913,5 @@ aprender a convertirte en Meta Tech Provider y monetizar con tu agencia de IA?
 de producción (webhook firmado, ingesta idempotente, cifrado de tokens) vienen
 de un proyecto de referencia privado en producción, portados y simplificados
 para este repo.
+
+Permisos por asesor: [cartera y acceso a expedientes](docs/permisos-por-asesor.md).

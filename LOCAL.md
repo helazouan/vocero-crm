@@ -49,6 +49,19 @@ WhatsApp se configura en la aplicación, en Configuración → WhatsApp. Recibir
 webhooks reales requiere una URL HTTPS pública, por ejemplo mediante un túnel
 hacia esta instancia. Esa conexión no se crea durante la instalación local.
 
+Para un túnel de pruebas limitado al webhook, mantén `APP_BASE_URL` local y
+define `WEBHOOK_BASE_URL` con el origen HTTPS que entregue el túnel. Arranca
+`node --env-file=.env scripts/webhook-proxy.mjs` y apunta el túnel a
+`http://127.0.0.1:3107`, nunca directamente al puerto 3000. El proxy solo admite
+GET/POST en la ruta exacta del webhook de WhatsApp; mantiene la firma de Meta y
+rechaza el resto de rutas. No imprime la URL secreta ni el contenido de mensajes.
+Reinicia el CRM después de cambiar `WEBHOOK_BASE_URL`.
+
+Los túneles temporales cambian de dominio al arrancar de nuevo: actualiza la
+variable y vuelve a registrar el webhook en Meta. Al parar el túnel o el Mac
+dejarán de entrar mensajes. El token de acceso de Meta se pega directamente en
+Configuración → WhatsApp, no se añade al repositorio.
+
 La IA se configura en Ajustes → IA con tu proveedor y su llave. La respuesta
 automática requiere además un agente externo como Nea; no viene integrado en
 Vocero 2.x. Sin estas conexiones puedes acceder y configurar el CRM local.
@@ -66,6 +79,11 @@ son internos y se actualizan cada minuto y al volver a la ventana; no envían
 WhatsApp, correo ni notificaciones push. Cada oportunidad conserva una acción:
 programar la siguiente sustituye la anterior.
 
+La Bandeja permite programar esa acción desde los detalles del cliente. Al
+guardar notas muestra confirmación o un error con el borrador conservado.
+Si falla la carga de conversaciones o mensajes, puedes reintentar desde el
+aviso. Cuando está vacía ofrece accesos a Contactos, Pipeline y Seguimientos.
+
 La actualización 2.2.0 añade la migración `0023_seguimiento_comercial.sql`.
 Para actualizar otra copia desde el código, ejecuta `npm run db:migrate` antes
 de arrancarla. En esta instalación ya está aplicada y hay una copia previa
@@ -77,6 +95,12 @@ a tu base de trabajo. Requiere Chromium de Playwright y permisos para crear
 bases en el PostgreSQL local.
 
 ## Trabajar en mejoras
+
+La demostración actual es **Inmobiliaria Horizonte**, con inmuebles, compradores
+e importes ficticios en español de España. La adaptación de la antigua ferretería
+conservó identificadores, seguimientos y notas personalizadas. La copia previa
+está en `.local/antes-demo-inmobiliaria.dump`. `npm run test:e2e:demo` comprueba el
+contenido y el aislamiento en una base temporal sin alterar tus datos.
 
 ```bash
 git switch -c codex/nombre-de-la-mejora

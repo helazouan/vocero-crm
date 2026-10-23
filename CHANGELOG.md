@@ -5,6 +5,98 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.5.1 — Plantillas para inmobiliarias
+
+- Ayuda en español de España, consejos visibles y ejemplos de confirmación y
+  recordatorio de visita, seguimiento de operación y propuesta de vivienda.
+- Español de España predeterminado para nuevas plantillas, sin cambiar existentes;
+  categorías y ejemplos ficticios con vista previa y sin prometer aprobación.
+- Aviso de conexión pendiente; errores de carga distintos de una lista vacía,
+  reintento y conservación del formulario. Actualización de estados explícita.
+- Solo dirección crea y sincroniza; asesores consultan y utilizan las aprobadas
+  dentro de su cartera. Se corrige la referencia a tarifas por conversación.
+- Actualizar desde 2.5.0: reconstruir desde código y reiniciar. Sin migraciones ni
+  cambios de credenciales o plantillas existentes. No hay imagen del fork publicada.
+
+## 2.5.0 — Cartera por asesor
+
+- Cada asesor consulta y gestiona únicamente clientes asignados, documentos,
+  conversaciones, operaciones, visitas y seguimientos. Propietario/administrador
+  conserva acceso completo y asigna las carteras; sin asignación, solo dirección.
+- Los documentos siguen al cliente aunque cambie su asesor o autor. Se comprueban
+  archivos originales y reenvíos, referencias y acceso por URL/API directa.
+- Nuevos clientes del asesor se asignan automáticamente. Reasignar invalida las
+  pantallas abiertas y SSE consulta la cartera vigente antes de entregar eventos.
+- Catálogo inmobiliario compartido sin titulares ajenos; edición de inmuebles,
+  importación, resultados globales, laboratorio y configuración para dirección.
+- Actualizar desde 2.4.0: copia de PostgreSQL, medios y claves; reconstruir desde
+  código. Sin migración nueva. Revisar responsables de clientes existentes:
+  los no asignados quedan solo en dirección. No hay imagen del fork publicada.
+
+## 2.4.0 — 2026-10-23 (fork, instalación desde código)
+
+- Ficha inmobiliaria al recibir una entrada por WhatsApp y recepción de documentos
+  por cliente, con copia cifrada, origen y estado pendiente de revisión.
+- Tipos documentales, asociación a cliente/inmueble/operación, solicitudes concretas,
+  motivo de rechazo y versiones que vuelven a revisión. No se clasifican documentos
+  ni se valida su titular automáticamente.
+- Reintento de incorporación, control de duplicados por mensaje, permisos también
+  en el original del chat y almacenamiento local mediante sustitución atómica.
+- Copias compatibles con documentos de 2.3.0 y conservación de todos los vínculos.
+
+Actualizar con copia previa, migración aditiva 0025 y reconstrucción desde código.
+Guía en `docs/documentacion-por-cliente.md`. La descarga real requiere conectar Meta.
+
+## 2.3.0 — 2026-10-23 (fork, instalación desde código)
+
+- Gestión de inmuebles con precios en euros, propietario, asesor, características,
+  fotografías, búsqueda y filtros.
+- Fichas de compradores y propietarios con preferencias, coincidencias de
+  viviendas, próxima acción, conversaciones e historial compartido.
+- Operaciones de compraventa, ofertas, contraofertas y reservas exclusivas.
+- Agenda presencial con vistas de día, semana, mes y lista en Europe/Madrid;
+  comprobación de solapamientos también ante peticiones simultáneas.
+- Expedientes con documentos cifrados, versiones, permisos, vencimientos y estado
+  de firma registrado manualmente. No incluye firma electrónica.
+- Mi jornada: visitas, acciones y documentación pendiente, con filtro por asesor.
+- Copias cifradas de expedientes, previsualización y restauración por administrador.
+  Guía de recuperación completa en `docs/gestion-inmobiliaria.md`.
+- Protección de contactos vinculados y demo al existir expedientes.
+
+Actualizar: copia de PostgreSQL + medios + secretos, aplicar la migración aditiva
+`0024_gestion_inmobiliaria.sql` y reconstruir desde código. No hay imagen publicada
+de esta versión del fork todavía. Las APIs existentes de bot y agenda se mantienen.
+
+## 2.2.3 — 2026-10-23 (fork, instalación desde código)
+
+- Demostración de Inmobiliaria Horizonte, con conversaciones, conocimiento y
+  ejemplos de evaluación sobre compraventa de viviendas en español de España.
+- Importes de ejemplo en euros y fechas y horas de la bandeja con formato español.
+- La limpieza de la demo queda limitada a la organización que la solicita.
+
+Actualizar desde 2.2.2: reconstruir y reiniciar, sin migración. Los nuevos ejemplos
+se cargan solo en instalaciones vacías; la adaptación local de la demo anterior
+conserva los identificadores, seguimientos y notas personalizadas. Imagen no publicada.
+
+## 2.2.2 — 2026-10-23 (fork, instalación desde código)
+
+- Bandeja con errores de carga y reintento en conversaciones y mensajes.
+- Accesos a Contactos, Pipeline y Seguimientos desde la bandeja vacía.
+- Próxima acción en los detalles del cliente y guardado de notas con confirmación
+  o error visible, conservando el texto si falla.
+- El panel se reinicia al cambiar de conversación para no mezclar detalles.
+
+Actualizar desde 2.2.1: reconstruir y reiniciar, sin migraciones ni variables nuevas.
+Esta versión del fork se instala desde código; no se publica una imagen.
+
+## 2.2.1 — 2026-10-23 (fork, instalación desde código)
+
+- `WEBHOOK_BASE_URL` permite un callback HTTPS independiente del acceso local.
+- Proxy de desarrollo limitado al webhook de WhatsApp, para túneles temporales.
+
+Actualizar desde 2.2.0: reconstruir y reiniciar, sin migración. La variable nueva
+es opcional; sin ella se mantiene el comportamiento anterior. No se publica imagen.
+
 ## 2.2.0 — 2026-10-23 (fork, instalación desde código)
 
 - Contactos paginados, filtros y prioridad antes del corte; errores visibles y

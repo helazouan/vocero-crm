@@ -1,3 +1,5 @@
+import { contactScope } from "@/server/portfolio/access";
+import type { SessionContext } from "@/lib/auth/session";
 import { asc, desc, eq, gte, lt } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
@@ -66,11 +68,12 @@ function baseQuery() {
 /** Las últimas 200 citas: el listado de siempre, para quien no pide rango. */
 export async function listBookings(
   organizationId: string,
-  settings?: CalendarSettings
+  settings?: CalendarSettings,
+  session?: SessionContext
 ): Promise<BookingListItem[]> {
   const resolved = settings ?? (await getSettings(organizationId));
   const rows = await baseQuery()
-    .where(scoped(schema.booking.organizationId, organizationId))
+    .where(scoped(schema.booking.organizationId, organizationId, session ? contactScope(session, schema.booking.contactId) : undefined))
     .orderBy(desc(schema.booking.scheduledAt))
     .limit(LIST_LIMIT);
   return rows.map((r) => toListItem(r, resolved.timezone));
@@ -86,7 +89,8 @@ export async function listBookings(
 export async function listBookingsInRange(
   organizationId: string,
   range: DateRange,
-  settings?: CalendarSettings
+  settings?: CalendarSettings,
+  session?: SessionContext
 ): Promise<{ bookings: BookingListItem[]; truncated: boolean }> {
   const resolved = settings ?? (await getSettings(organizationId));
   const tz = resolved.timezone;
@@ -99,6 +103,7 @@ export async function listBookingsInRange(
       scoped(
         schema.booking.organizationId,
         organizationId,
+        session ? contactScope(session, schema.booking.contactId) : undefined,
         gte(schema.booking.scheduledAt, new Date(start.getTime() - LOOKBACK_MS)),
         lt(schema.booking.scheduledAt, end)
       )

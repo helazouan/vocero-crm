@@ -28,7 +28,7 @@ export const GET = withAuth(async (session) => {
       .limit(1),
     getBrainHealth(urlSaludCerebro() ?? undefined),
     isAiConfiguredFor(session.organizationId),
-    estadoDelDespacho(session.organizationId),
+    estadoDelDespacho(session.organizationId, session),
   ]);
   const status = computeBrainStatus({
     aiConfigured,

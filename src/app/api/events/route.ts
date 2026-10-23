@@ -1,3 +1,4 @@
+import { canReceivePortfolioEvent } from "@/server/portfolio/events";
 import { requireSession, UnauthorizedError } from "@/lib/auth/session";
 import { subscribe } from "@/server/events/bus";
 
@@ -37,12 +38,20 @@ export async function GET(req: Request) {
 
       send(`: conectado\n\n`);
 
+      let pending = Promise.resolve();
       const unsubscribe = subscribe(organizationId, (event) => {
-        send(
-          `event: ${event.type}\n` +
-            `id: ${Date.now()}\n` +
-            `data: ${JSON.stringify(event.data)}\n\n`
-        );
+        pending = pending
+          .then(async () => {
+            if (!(await canReceivePortfolioEvent(session, event))) return;
+            send(
+              `event: ${event.type}\n` +
+                `id: ${Date.now()}\n` +
+                `data: ${JSON.stringify(event.data)}\n\n`,
+            );
+          })
+          .catch(() => {
+            /* Sin autorización comprobable, no se entrega el evento. */
+          });
       });
 
       const heartbeat = setInterval(() => send(`: ping\n\n`), HEARTBEAT_MS);

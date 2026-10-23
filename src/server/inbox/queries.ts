@@ -1,3 +1,5 @@
+import { contactScope } from "@/server/portfolio/access";
+import type { SessionContext } from "@/lib/auth/session";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
@@ -41,7 +43,8 @@ function aAnuncioDeLista(
 
 export async function listConversations(
   organizationId: string,
-  since?: Date
+  since?: Date,
+  session?: SessionContext
 ): Promise<ConversationDto[]> {
   const db = getDb();
   const previewSql = sql<string | null>`(
@@ -77,6 +80,7 @@ export async function listConversations(
         schema.conversation.organizationId,
         organizationId,
         eq(schema.conversation.isTest, false),
+        session ? contactScope(session, schema.conversation.contactId) : undefined,
         since ? gt(schema.conversation.updatedAt, since) : undefined
       )
     )

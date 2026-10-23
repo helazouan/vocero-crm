@@ -1,4 +1,5 @@
 "use client";
+import { canConfigure } from "@/lib/auth/roles";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -194,7 +195,7 @@ export function AppNav({
       <div className="flex-1" />
 
       {/* Ajustes va abajo, solo: no es trabajo del día. */}
-      {renderItem(SETTINGS_ITEM)}
+      {canConfigure(role) && renderItem(SETTINGS_ITEM)}
 
       <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">

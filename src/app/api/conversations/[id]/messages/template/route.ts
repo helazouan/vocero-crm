@@ -1,3 +1,4 @@
+import { assertConversationAccess } from "@/server/portfolio/access";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
 import { SendError } from "@/server/inbox/send";
@@ -20,6 +21,7 @@ const bodySchema = z.object({
 
 export const POST = withAuth(async (session, req: Request, ctx: Params) => {
   const { id } = await ctx.params;
+  await assertConversationAccess(session, id);
   const body = await parseBody(req, bodySchema);
   if (!body.ok) return body.response;
 

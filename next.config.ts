@@ -9,6 +9,8 @@ const { version } = JSON.parse(
 
 const nextConfig: NextConfig = {
   distDir: process.env.VOCERO_DIST_DIR ?? ".next",
+  // Las rutas de webhook contienen el verify token; no deben salir en logs.
+  logging: { incomingRequests: { ignore: [/^\/api\/webhooks\//] } },
   // standalone es para la imagen Docker (Linux). En Windows el trazado crea
   // symlinks que requieren permisos elevados, así que ahí se omite.
   output: process.platform === "win32" ? undefined : "standalone",

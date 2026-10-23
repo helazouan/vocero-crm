@@ -19,6 +19,8 @@ import { Composer } from "./composer";
 import { setConversacionAbierta } from "@/components/avisos-de-mensajes";
 import { citaDe } from "./helpers";
 import { ContactPanel } from "./contact-panel";
+import { requestJson } from "@/lib/request-json";
+import { Button } from "@/components/ui/button";
 
 /**
  * Texto que ya salió del compositor pero cuyo POST todavía viaja. Existe solo
@@ -57,6 +59,11 @@ export function InboxClient({
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageDto[]>([]);
+  const [listError, setListError] = useState("");
+  const [messageError, setMessageError] = useState("");
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const listRequest = useRef(0);
+  const messageRequest = useRef(0);
   const [pending, setPending] = useState<PendingOut[]>([]);
   // 039: el mensaje al que se está respondiendo citando.
   const [replyTo, setReplyTo] = useState<MessageDto | null>(null);
@@ -95,20 +102,24 @@ export function InboxClient({
   const sendQueue = useRef<Promise<unknown>>(Promise.resolve());
 
   const refetchConversations = useCallback(async () => {
-    const res = await fetch("/api/conversations").catch(() => null);
-    if (!res?.ok) return;
-    const data = (await res.json()) as { conversations: ConversationDto[] };
-    setConversations(data.conversations);
-    lastFetchRef.current = new Date().toISOString();
+    const request = ++listRequest.current;
+    setListError("");
+    try {
+      const data = await requestJson<{ conversations: ConversationDto[] }>("/api/conversations");
+      if (request !== listRequest.current) return;
+      setConversations(data.conversations);
+      lastFetchRef.current = new Date().toISOString();
+    } catch (err) { if (request === listRequest.current) setListError((err as Error).message); }
   }, []);
 
   const refetchMessages = useCallback(async (conversationId: string) => {
-    const res = await fetch(
-      `/api/conversations/${conversationId}/messages`
-    ).catch(() => null);
-    if (!res?.ok) return;
-    const data = (await res.json()) as { messages: MessageDto[] };
-    if (selectedIdRef.current === conversationId) setMessages(data.messages);
+    const request = ++messageRequest.current;
+    const current = () => selectedIdRef.current === conversationId && request === messageRequest.current;
+    try {
+      const data = await requestJson<{ messages: MessageDto[] }>(`/api/conversations/${conversationId}/messages`);
+      if (current()) { setMessages(data.messages); setMessageError(""); }
+    } catch (err) { if (current()) setMessageError((err as Error).message); }
+    finally { if (current()) setMessagesLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -117,8 +128,11 @@ export function InboxClient({
 
   const select = useCallback(
     (id: string) => {
+      selectedIdRef.current = id;
       setSelectedId(id);
       setMessages([]);
+      setMessageError("");
+      setMessagesLoading(true);
       setReplyTo(null);
       void refetchMessages(id);
       void fetch(`/api/conversations/${id}`, {
@@ -364,6 +378,8 @@ export function InboxClient({
           selectedId={selectedId}
           onSelect={select}
           onSeeded={() => void refetchConversations()}
+          error={listError}
+          onRetry={() => void refetchConversations()}
         />
       </section>
 
@@ -447,7 +463,11 @@ export function InboxClient({
                 void refetchConversations();
               }}
             >
-              <MessageThread
+              {messageError && <div role="alert" className="border-b p-4 text-sm text-destructive">
+                No se pudieron cargar los mensajes. {messageError}{" "}
+                <Button size="sm" variant="outline" onClick={() => { setMessageError(""); setMessagesLoading(true); void refetchMessages(selected.id); }}>Reintentar mensajes</Button>
+              </div>}
+              {messagesLoading && thread.length === 0 ? <p role="status" className="flex-1 p-4 text-sm text-muted-foreground">Cargando mensajes…</p> : (!messageError || thread.length > 0) && <MessageThread
                 messages={thread}
                 contactName={selected.contact.name}
                 // 039: citar solo donde el canal lo permite y se puede escribir
@@ -462,7 +482,7 @@ export function InboxClient({
                   if (selectedIdRef.current) void refetchMessages(selectedIdRef.current);
                   void refetchConversations();
                 }}
-              />
+              />}
             </Composer>
           </>
         ) : (
@@ -499,6 +519,7 @@ export function InboxClient({
         {selected && (
           <div className="h-full w-[320px] max-xl:w-[min(320px,88vw)]">
             <ContactPanel
+              key={selected.id}
               conversation={selected}
               refreshKey={detailRev}
               onPatchConversation={patchConversation}

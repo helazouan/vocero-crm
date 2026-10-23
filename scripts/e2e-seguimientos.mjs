@@ -86,6 +86,13 @@ try {
   await page.getByLabel("Contraseña", { exact: true }).fill(credentials.password);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(url => !url.pathname.includes("login"));
+  await page.route("**/api/conversations", route => route.abort());
+  await page.goto(`${base}/inbox`);
+  await page.getByRole("alert").filter({ hasText: "No se pudieron cargar las conversaciones" }).waitFor();
+  await page.unroute("**/api/conversations");
+  await page.getByRole("button", { name: "Reintentar conversaciones", exact: true }).click();
+  await page.getByText("Sin conversaciones todavía", { exact: true }).waitFor();
+  await page.getByRole("link", { name: "Abrir Contactos", exact: true }).waitFor();
   await page.goto(`${base}/contacts`);
   await page.getByText("Página 1 de 5 · 215 contactos", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Siguiente", exact: true }).click();
@@ -145,6 +152,54 @@ try {
   await page.screenshot({ path: ".local/seguimientos-mobile.png", fullPage: true });
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Sin desbordamiento horizontal");
   console.log("Navegador: paginación, errores/reintento, formulario conservado, modo manual/IA, edición desde Pipeline y completado desde Seguimientos correctos.");
+  await sql`insert into conversation (id,organization_id,contact_id,last_message_at) values
+    ('cv_review',${org.id},'ct_review_234',now()),('cv_review_second',${org.id},'ct_review_233',now())`;
+  await sql`insert into message (id,organization_id,conversation_id,direction,text,status) values
+    ('msg_review',${org.id},'cv_review','in','Consulta de presupuesto','read'),
+    ('msg_review_second',${org.id},'cv_review_second','in','Consulta de otro cliente','read')`;
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.route("**/api/conversations/cv_review/messages", route => route.abort());
+  await page.goto(`${base}/inbox`);
+  await page.getByRole("button", { name: /Contacto 234/ }).click();
+  await page.getByRole("alert").filter({ hasText: "No se pudieron cargar los mensajes" }).waitFor();
+  await page.unroute("**/api/conversations/cv_review/messages");
+  await page.getByRole("button", { name: "Reintentar mensajes", exact: true }).click();
+  await page.getByText("Consulta de presupuesto", { exact: true }).last().waitFor();
+  const notes = page.getByRole("textbox", { name: "Notas internas", exact: true });
+  await notes.fill("Llamar antes de enviar el presupuesto");
+  await page.route("**/api/contacts/ct_review_234", route => route.request().method() === "PATCH" ? route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { message: "Error de notas de prueba" } }) }) : route.continue());
+  await page.getByRole("button", { name: "Guardar notas", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "Error de notas de prueba" }).waitFor();
+  assert.equal(await notes.inputValue(), "Llamar antes de enviar el presupuesto");
+  await page.unroute("**/api/contacts/ct_review_234");
+  await page.getByRole("button", { name: "Guardar notas", exact: true }).click();
+  await page.getByText("Notas guardadas", { exact: true }).waitFor();
+  await page.getByLabel("Qué hay que hacer", { exact: true }).fill("Preparar propuesta desde Bandeja");
+  await page.getByLabel("Fecha y hora", { exact: true }).fill("2099-12-12T10:00");
+  await page.getByRole("button", { name: "Guardar acción", exact: true }).click();
+  await page.getByRole("button", { name: "Completar acción", exact: true }).waitFor();
+  await page.getByRole("button", { name: /Contacto 233/ }).click();
+  await notes.waitFor({ state: "visible" });
+  await page.waitForFunction(() => document.querySelector('textarea[aria-label="Notas internas"]')?.disabled === false);
+  assert.equal(await notes.inputValue(), "");
+  assert.equal(await page.getByText("Notas guardadas", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: /Contacto 234/ }).click();
+  await page.waitForFunction(() => document.querySelector('textarea[aria-label="Notas internas"]')?.value === "Llamar antes de enviar el presupuesto");
+  await page.getByLabel("Qué hay que hacer", { exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Qué hay que hacer", { exact: true }).inputValue(), "Preparar propuesta desde Bandeja");
+  await page.screenshot({ path: ".local/bandeja-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await page.getByRole("button", { name: /Contacto 234/ }).click();
+  await page.getByRole("button", { name: "Mostrar detalles", exact: true }).click();
+  await page.getByRole("region", { name: "Próxima acción", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Guardar acción", exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Qué hay que hacer", { exact: true }).inputValue(), "Preparar propuesta desde Bandeja");
+  await page.screenshot({ path: ".local/bandeja-mobile.png", fullPage: true });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Bandeja móvil sin desbordamiento");
+  await page.goto(`${base}/follow-ups`);
+  await page.getByRole("heading", { name: "Preparar propuesta desde Bandeja", exact: true }).waitFor();
+  console.log("Bandeja: vacío con accesos, fallos de lista e hilo con reintento, notas conservadas y persistentes, cambio de cliente y seguimiento desde detalles correctos en escritorio y móvil.");
   if (process.env.E2E_KEEP_SERVER === "1") {
     writeFileSync(".local/e2e-review.json", JSON.stringify({ base, database, ...credentials }), { mode: 0o600 });
     console.log("Servidor de ensayo conservado para inspección visual.");

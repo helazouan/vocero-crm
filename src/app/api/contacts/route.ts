@@ -1,3 +1,5 @@
+import { canConfigure } from "@/lib/auth/roles";
+import { contactScope } from "@/server/portfolio/access";
 import { asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { apiError, parseBody, withAuth } from "@/lib/api";
@@ -82,6 +84,7 @@ export const GET = withAuth(async (session, req: Request) => {
 
   const condition = scoped(
     schema.contact.organizationId, session.organizationId, search,
+    contactScope(session, schema.contact.id),
     includeArchived ? undefined : isNull(schema.contact.archivedAt),
     stageContactIds ? inArray(schema.contact.id, stageContactIds) : undefined
   );
@@ -156,6 +159,15 @@ export const POST = withAuth(async (session, req: Request) => {
     .returning();
   if (!inserted[0]) {
     return apiError(409, "duplicate", "Ya existe un contacto con ese teléfono");
+  }
+
+  if (!canConfigure(session.role)) {
+    await db.insert(schema.estateClient).values({
+      id: inserted[0].id,
+      organizationId: session.organizationId,
+      role: "sin_clasificar",
+      assignedUserId: session.userId,
+    });
   }
 
   // Y su lead: un contacto sin lead es invisible en el Pipeline, que es la

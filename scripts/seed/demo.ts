@@ -1,3 +1,4 @@
+import { seedEstateDemo } from "@/server/estate/demo";
 /**
  * CLI del seed demo: `pnpm seed:demo` (local) o `node seed-demo.mjs` dentro
  * del contenedor. Acepta --force para recargar aunque haya datos.
@@ -50,8 +51,9 @@ if (!force && !(await isDomainEmpty(db, org.id))) {
 }
 
 const result = await seedDemo(db, org.id);
+await seedEstateDemo(db,org.id);
 console.log(
-  `[seed] Ferretería El Martillo cargada: ${result.contacts} contactos, ${result.kbEntries} entradas de KB, 1 corrida de ejemplo`
+  `[seed] Inmobiliaria Horizonte cargada: ${result.contacts} contactos, ${result.kbEntries} entradas de KB, 1 corrida de ejemplo`
 );
 await sql.end();
 process.exit(0);

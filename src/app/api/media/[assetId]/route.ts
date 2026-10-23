@@ -1,11 +1,11 @@
+import { assertMediaAccess } from "@/server/portfolio/access";
+import { registerIncomingDocument } from "@/server/estate/incoming-documents";
+import { canReadDocument } from "@/server/estate/service";
 import { eq } from "drizzle-orm";
 import { apiError, withAuth } from "@/lib/api";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
-import {
-  ensureAssetAvailable,
-  readMediaFile,
-} from "@/server/whatsapp/media";
+import { ensureAssetAvailable, readMediaFile } from "@/server/whatsapp/media";
 import { mediaResponseHeaders } from "@/server/whatsapp/media-headers";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +24,7 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
     return apiError(422, "invalid", "assetId inválido");
   }
 
+  await assertMediaAccess(session, assetId);
   const db = getDb();
   const rows = await db
     .select()
@@ -32,12 +33,29 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
       scoped(
         schema.mediaAsset.organizationId,
         session.organizationId,
-        eq(schema.mediaAsset.id, assetId)
-      )
+        eq(schema.mediaAsset.id, assetId),
+      ),
     )
     .limit(1);
   let asset = rows[0];
   if (!asset) return apiError(404, "not_found", "Adjunto no encontrado");
+
+  const [linkedDocument] = await db
+    .select()
+    .from(schema.estateDocument)
+    .where(
+      scoped(
+        schema.estateDocument.organizationId,
+        session.organizationId,
+        eq(schema.estateDocument.sourceMediaAssetId, assetId),
+      ),
+    )
+    .limit(1);
+  const document =
+    linkedDocument ??
+    (await registerIncomingDocument(session.organizationId, assetId));
+  if (document && !await canReadDocument(session, document))
+    return apiError(404, "not_found", "Adjunto no encontrado");
 
   if (asset.kind === "location" || asset.kind === "contacts") {
     // Sin binario: el payload viaja en el DTO del mensaje.
@@ -46,13 +64,14 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
 
   if (asset.fetchStatus !== "available") {
     // On-demand: reintenta la descarga en el momento (pending o failed).
-    asset = (await ensureAssetAvailable(session.organizationId, assetId)) ?? asset;
+    asset =
+      (await ensureAssetAvailable(session.organizationId, assetId)) ?? asset;
   }
   if (asset.fetchStatus !== "available" || !asset.storagePath) {
     return apiError(
       410,
       "gone",
-      "El contenido ya no está disponible (expiró en WhatsApp antes de poder copiarse)"
+      "El contenido ya no está disponible (expiró en WhatsApp antes de poder copiarse)",
     );
   }
 
@@ -63,6 +82,10 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
       headers: mediaResponseHeaders(asset, data.byteLength),
     });
   } catch {
-    return apiError(410, "gone", "El archivo del adjunto no está en el volumen");
+    return apiError(
+      410,
+      "gone",
+      "El archivo del adjunto no está en el volumen",
+    );
   }
 });

@@ -1,4 +1,5 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {randomBytes} from "node:crypto";
+import { mkdir, readFile, rm, writeFile, rename } from "node:fs/promises";
 import path from "node:path";
 import { getEnv } from "@/lib/env";
 import {
@@ -97,7 +98,9 @@ let avisoSinConfig = false;
 async function escribirEnDisco(organizationId: string, assetId: string, buf: Buffer): Promise<void> {
   const file = rutaEnDisco(organizationId, assetId);
   await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, buf);
+  const temporary=file+".tmp-"+randomBytes(8).toString("hex");
+  try{await writeFile(temporary,buf,{flag:"wx",mode:0o600});await rename(temporary,file);}finally{await rm(temporary,{force:true}).catch(()=>{});}
+
 }
 
 /** Guarda el binario y devuelve la ruta relativa que se persiste en la BD. */

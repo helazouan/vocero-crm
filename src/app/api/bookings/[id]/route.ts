@@ -1,3 +1,4 @@
+import { assertBookingAccess } from "@/server/portfolio/access";
 import { z } from "zod";
 import { parseBody, withAuth } from "@/lib/api";
 import { agendaDisabledResponse, agendaEnabled } from "@/server/agenda/flag";
@@ -30,6 +31,7 @@ const patchSchema = z.discriminatedUnion("action", [
 export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
   if (!agendaEnabled()) return agendaDisabledResponse();
   const { id } = await ctx.params;
+  await assertBookingAccess(session, id);
   const body = await parseBody(req, patchSchema);
   if (!body.ok) return body.response;
 

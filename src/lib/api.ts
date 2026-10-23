@@ -1,11 +1,17 @@
+import { canConfigure } from "@/lib/auth/roles";
+import { PortfolioError } from "@/server/portfolio/access";
 import { z } from "zod";
-import { requireSession, UnauthorizedError, type SessionContext } from "@/lib/auth/session";
+import {
+  requireSession,
+  UnauthorizedError,
+  type SessionContext,
+} from "@/lib/auth/session";
 
 /** Respuesta de error estándar de la API interna (contrato api.md). */
 export function apiError(
   status: number,
   code: string,
-  message: string
+  message: string,
 ): Response {
   return Response.json({ error: { code, message } }, { status });
 }
@@ -15,7 +21,7 @@ export function apiError(
  * captura errores no controlados (500 sin stack) y deja pasar Response.
  */
 export function withAuth<Args extends unknown[]>(
-  handler: (session: SessionContext, ...args: Args) => Promise<Response>
+  handler: (session: SessionContext, ...args: Args) => Promise<Response>,
 ): (...args: Args) => Promise<Response> {
   return async (...args: Args) => {
     let session: SessionContext;
@@ -28,18 +34,37 @@ export function withAuth<Args extends unknown[]>(
       throw err;
     }
     try {
-      return await handler(session, ...args);
+      const response = await handler(session, ...args);
+      response.headers.set("Cache-Control", "private, no-store");
+      return response;
     } catch (err) {
+      if (err instanceof PortfolioError)
+        return apiError(404, "not_found", err.message);
       console.error("[api] error no controlado:", err);
       return apiError(500, "internal", "Error interno");
     }
   };
 }
 
+/** Configuración y datos globales: la autorización no depende de cómo se codifique la URL. */
+export function withManagement<Args extends unknown[]>(
+  handler: (session: SessionContext, ...args: Args) => Promise<Response>,
+): (...args: Args) => Promise<Response> {
+  return withAuth(async (session, ...args: Args) => {
+    if (!canConfigure(session.role))
+      return apiError(
+        403,
+        "forbidden",
+        "Solo dirección puede gestionar esta sección",
+      );
+    return handler(session, ...args);
+  });
+}
+
 /** Parsea el body JSON con un esquema Zod; inválido → Response 422. */
 export async function parseBody<T>(
   req: Request,
-  schema: z.ZodType<T>
+  schema: z.ZodType<T>,
 ): Promise<{ ok: true; data: T } | { ok: false; response: Response }> {
   let raw: unknown;
   try {

@@ -15,6 +15,7 @@ export type TemplateLanguageGroup = "es" | "pt-en" | "otros";
 type Entry = { code: string; name: string; group: TemplateLanguageGroup };
 
 const ESPANOL: Entry[] = [
+  { code: "es_ES", name: "Español (España)", group: "es" },
   { code: "es_MX", name: "Español (México)", group: "es" },
   { code: "es", name: "Español (general)", group: "es" },
   { code: "es_AR", name: "Español (Argentina)", group: "es" },
@@ -22,7 +23,6 @@ const ESPANOL: Entry[] = [
   { code: "es_CO", name: "Español (Colombia)", group: "es" },
   { code: "es_CR", name: "Español (Costa Rica)", group: "es" },
   { code: "es_EC", name: "Español (Ecuador)", group: "es" },
-  { code: "es_ES", name: "Español (España)", group: "es" },
   { code: "es_HN", name: "Español (Honduras)", group: "es" },
   { code: "es_PA", name: "Español (Panamá)", group: "es" },
   { code: "es_PE", name: "Español (Perú)", group: "es" },
@@ -94,7 +94,7 @@ export const TEMPLATE_LANGUAGE_GROUPS: { id: TemplateLanguageGroup; label: strin
   { id: "otros", label: "Otros idiomas" },
 ];
 
-export const DEFAULT_TEMPLATE_LANGUAGE = "es_MX";
+export const DEFAULT_TEMPLATE_LANGUAGE = "es_ES";
 
 const BY_CODE = new Map(TEMPLATE_LANGUAGES.map((l) => [l.code, l.name]));
 

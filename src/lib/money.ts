@@ -89,7 +89,7 @@ export function sumable(
 export function formatMoneyCents(
   cents: number | null | undefined,
   currency: string,
-  locale = "es-MX"
+  locale = currency === "EUR" ? "es-ES" : "es-MX"
 ): string | null {
   if (cents === null || cents === undefined) return null;
   try {
