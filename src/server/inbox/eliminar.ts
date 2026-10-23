@@ -39,6 +39,7 @@ export type ResultadoEliminar =
       /** En `hilo`, una. En `contacto`, todas las reales de esa persona. */
       conversaciones: ConversacionEliminada[];
     }
+  | { ok: false; motivo: "expediente_vinculado" }
   | { ok: false; motivo: "no_encontrada" }
   | { ok: false; motivo: "cita_pendiente"; cuando: Date };
 
@@ -51,6 +52,9 @@ export async function eliminarConversacion(
   const archivos: string[] = [];
 
   const resultado = await db.transaction(async (tx): Promise<ResultadoEliminar> => {
+    if (alcance === "contacto") {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${organizationId + ":estate"}, 0))`);
+    }
     const [org] = await tx
       .select({ id: schema.organization.id, slug: schema.organization.slug })
       .from(schema.organization)
@@ -87,6 +91,19 @@ export async function eliminarConversacion(
     if (!fila || fila.conversation.isTest) return { ok: false, motivo: "no_encontrada" };
     const { contact } = fila;
     const todoElContacto = alcance === "contacto";
+
+    if (todoElContacto) {
+      for (const table of [schema.estateClient, schema.estateDeal, schema.estateVisit, schema.property, schema.estateDocument]) {
+        const relation = table === schema.estateClient ? eq(schema.estateClient.id, contact.id)
+          : table === schema.estateDeal ? eq(schema.estateDeal.contactId, contact.id)
+          : table === schema.estateVisit ? eq(schema.estateVisit.contactId, contact.id)
+          : table === schema.property ? eq(schema.property.ownerContactId, contact.id)
+          : and(eq(schema.estateDocument.entityType, "client"), eq(schema.estateDocument.entityId, contact.id));
+        const [linked] = await tx.select({ id: table.id }).from(table)
+          .where(scoped(table.organizationId, organizationId, relation)).limit(1);
+        if (linked) return { ok: false, motivo: "expediente_vinculado" };
+      }
+    }
 
     const conversaciones = todoElContacto
       ? await tx

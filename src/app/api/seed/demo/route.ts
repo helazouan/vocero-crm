@@ -1,3 +1,4 @@
+import { seedEstateDemo } from "@/server/estate/demo";
 import { apiError, withAuth } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { isDomainEmpty, seedDemo } from "@/server/seed/demo";
@@ -15,9 +16,10 @@ export const POST = withAuth(async (session) => {
     return apiError(
       409,
       "not_empty",
-      "Ya hay datos en la organización; la demo solo se carga con la base vacía"
+      "Ya hay datos en la organización; la demo solo se carga con la base vacía",
     );
   }
   const result = await seedDemo(db, session.organizationId);
+  await seedEstateDemo(db, session.organizationId);
   return Response.json({ ok: true, ...result });
 });

@@ -5,6 +5,8 @@ producto** — y saberlo antes de leerla ahorra una confusión.
 
 ## Qué hay aquí
 
+El fork inmobiliario se especifica en [050-gestion-inmobiliaria](050-gestion-inmobiliaria/spec.md), con plan, tareas y pruebas de API/UI.
+
 | | Carril | Artefactos |
 |---|---|---|
 | `001-vocero-core` | Ciclo completo | spec, plan, research, data-model, 5 contratos, tasks, checklist |

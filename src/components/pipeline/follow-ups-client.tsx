@@ -36,7 +36,7 @@ export function FollowUpsClient() {
 
   return <div className="h-full overflow-y-auto p-4 sm:p-6">
     <h1 className="text-2xl font-semibold">Seguimientos</h1>
-    <p className="mt-2 text-sm text-muted-foreground">Recordatorios de tus oportunidades. Hora de {timezone}. Programa una próxima acción desde el Pipeline.</p>
+    <p className="mt-2 text-sm text-muted-foreground">Recordatorios de tus oportunidades. Hora de {timezone}. Programa una próxima acción desde Clientes o el Pipeline.</p>
     <nav className="my-4 flex flex-wrap gap-2" aria-label="Filtrar seguimientos">
       {filters.map(([key, label]) => <Button key={key} variant={key === filter ? "default" : "outline"} aria-pressed={key === filter} onClick={() => setFilter(key)}>{label} ({items.filter(item => matchesFollowUp(item, key, now, timezone)).length})</Button>)}
     </nav>
@@ -47,7 +47,7 @@ export function FollowUpsClient() {
           <div><h2 className="font-semibold">{item.title}</h2><p className="text-sm">{item.contactName} · {new Date(item.dueAt!).toLocaleString("es", { timeZone: timezone })}</p>
             {!item.completedAt && matchesFollowUp(item, "overdue", now, timezone) && <p className="text-sm text-warning-text">Vencido</p>}
           </div>
-          <div className="flex gap-3"><Link className="text-sm underline" href={`/inbox?contact=${item.contactId}`}>Ver contacto</Link><Button size="sm" variant="outline" onClick={() => setEditing(editing === item.id ? null : item.id)}>{editing === item.id ? "Cerrar" : "Gestionar acción"}</Button></div>
+          <div className="flex gap-3"><Link className="text-sm underline" href={`/inbox?contact=${item.contactId}`}>Ver conversación</Link><Link className="text-sm underline" href={`/clients?id=${item.contactId}`}>Ver expediente</Link><Button size="sm" variant="outline" onClick={() => setEditing(editing === item.id ? null : item.id)}>{editing === item.id ? "Cerrar" : "Gestionar acción"}</Button></div>
         </div>
         {editing === item.id && <NextAction key={item.id} leadId={item.id} onSaved={() => void load()} />}
       </li>)}</ul>}

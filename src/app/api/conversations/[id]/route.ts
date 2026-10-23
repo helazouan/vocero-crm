@@ -6,7 +6,11 @@ import { construirEventoOlvido } from "@/server/brains/contract";
 import { avisarOlvido, type ResultadoOlvido } from "@/server/brains/deliver";
 import { publish } from "@/server/events/bus";
 import { eliminarConversacion } from "@/server/inbox/eliminar";
-import { serializeConversation, getConversation, updateConversation } from "@/server/inbox/queries";
+import {
+  serializeConversation,
+  getConversation,
+  updateConversation,
+} from "@/server/inbox/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +27,11 @@ export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
   const body = await parseBody(req, patchSchema);
   if (!body.ok) return body.response;
 
-  const updated = await updateConversation(session.organizationId, id, body.data);
+  const updated = await updateConversation(
+    session.organizationId,
+    id,
+    body.data,
+  );
   if (!updated) return apiError(404, "not_found", "Conversación no encontrada");
 
   const row = await getConversation(session.organizationId, id);
@@ -33,7 +41,7 @@ export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
       row.contact,
       null,
       null,
-      row.anuncio
+      row.anuncio,
     );
     publish(session.organizationId, {
       type: "conversation.updated",
@@ -58,20 +66,30 @@ export const DELETE = withAuth(async (session, req: Request, ctx: Params) => {
     return apiError(
       403,
       "forbidden",
-      "Solo quien administra el negocio puede eliminar conversaciones"
+      "Solo quien administra el negocio puede eliminar conversaciones",
     );
   }
   const { id } = await ctx.params;
   const alcance =
     new URL(req.url).searchParams.get("contacto") === "1" ? "contacto" : "hilo";
 
-  const resultado = await eliminarConversacion(session.organizationId, id, alcance);
+  const resultado = await eliminarConversacion(
+    session.organizationId,
+    id,
+    alcance,
+  );
   if (!resultado.ok) {
+    if (resultado.motivo === "expediente_vinculado")
+      return apiError(
+        409,
+        "expediente_vinculado",
+        "El cliente tiene un expediente inmobiliario. Archívalo desde Contactos para conservar contratos e historial, o elimina solo el hilo",
+      );
     if (resultado.motivo === "cita_pendiente") {
       return apiError(
         409,
         "cita_pendiente",
-        `Tiene una cita agendada para el ${FECHA_DE_CITA.format(resultado.cuando)}. Cancélala en Citas antes de eliminar.`
+        `Tiene una cita agendada para el ${FECHA_DE_CITA.format(resultado.cuando)}. Cancélala en Citas antes de eliminar.`,
       );
     }
     return apiError(404, "not_found", "Conversación no encontrada");
@@ -79,7 +97,7 @@ export const DELETE = withAuth(async (session, req: Request, ctx: Params) => {
 
   // Irreversible y sin papelera: que al menos quede quién y cuándo. Solo ids.
   console.info(
-    `[bandeja] ${session.userId} eliminó ${id} (${alcance}) en ${session.organizationId}`
+    `[bandeja] ${session.userId} eliminó ${id} (${alcance}) en ${session.organizationId}`,
   );
 
   // El aviso va DESPUÉS del borrado y no lo condiciona: lo que se pidió ya
@@ -94,7 +112,7 @@ export const DELETE = withAuth(async (session, req: Request, ctx: Params) => {
         conversation: conversacion,
         contact: resultado.contact,
         deletedAt,
-      })
+      }),
     );
     if (aviso === "sin_confirmar" || agente === "no_aplica") agente = aviso;
   }

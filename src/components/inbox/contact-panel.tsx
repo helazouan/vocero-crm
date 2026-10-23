@@ -337,7 +337,8 @@ export function ContactPanel({
           )}
         </section>
 
-        {leadId && <NextAction key={leadId} leadId={leadId} />}
+        <div className="border-b p-4 flex flex-wrap gap-3 text-sm text-brand-text underline"><Link href={`/clients?id=${contactId}`}>Expediente del cliente</Link><Link href="/agenda">Agenda de visitas</Link></div>
+              {leadId && <NextAction key={leadId} leadId={leadId} />}
         {/* Stepper de etapa */}
         {stages.length > 0 && leadId && (
           <section className="border-b p-4">

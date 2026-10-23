@@ -5,6 +5,26 @@ sigue el SemVer del [README](README.md#versiones): una menor trae funciones
 nuevas y actualizar es redesplegar. Desde 1.4.0, cada tag `vX.Y.Z` publica la
 imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
 
+## 2.3.0 — 2026-10-23 (fork, instalación desde código)
+
+- Gestión de inmuebles con precios en euros, propietario, asesor, características,
+  fotografías, búsqueda y filtros.
+- Fichas de compradores y propietarios con preferencias, coincidencias de
+  viviendas, próxima acción, conversaciones e historial compartido.
+- Operaciones de compraventa, ofertas, contraofertas y reservas exclusivas.
+- Agenda presencial con vistas de día, semana, mes y lista en Europe/Madrid;
+  comprobación de solapamientos también ante peticiones simultáneas.
+- Expedientes con documentos cifrados, versiones, permisos, vencimientos y estado
+  de firma registrado manualmente. No incluye firma electrónica.
+- Mi jornada: visitas, acciones y documentación pendiente, con filtro por asesor.
+- Copias cifradas de expedientes, previsualización y restauración por administrador.
+  Guía de recuperación completa en `docs/gestion-inmobiliaria.md`.
+- Protección de contactos vinculados y demo al existir expedientes.
+
+Actualizar: copia de PostgreSQL + medios + secretos, aplicar la migración aditiva
+`0024_gestion_inmobiliaria.sql` y reconstruir desde código. No hay imagen publicada
+de esta versión del fork todavía. Las APIs existentes de bot y agenda se mantienen.
+
 ## 2.2.3 — 2026-10-23 (fork, instalación desde código)
 
 - Demostración de Inmobiliaria Horizonte, con conversaciones, conocimiento y

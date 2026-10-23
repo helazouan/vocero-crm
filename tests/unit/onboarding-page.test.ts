@@ -87,9 +87,9 @@ describe("la raíz", () => {
     expect(guideFirst).toHaveBeenCalledWith(owner);
   });
 
-  it("con todo listo y el agente encendido, a la Bandeja como siempre", async () => {
+  it("con la guía resuelta, abre Mi jornada", async () => {
     getSessionOrNull.mockResolvedValue(owner);
     guideFirst.mockResolvedValue(false);
-    await expect(Home()).rejects.toThrow("redirect:/inbox");
+    await expect(Home()).rejects.toThrow("redirect:/work");
   });
 });

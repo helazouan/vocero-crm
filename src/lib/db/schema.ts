@@ -1283,3 +1283,114 @@ export const dispatch = pgTable(
     index("dispatch_status_notbefore_idx").on(t.status, t.notBefore),
   ]
 );
+
+/* Expediente inmobiliario: identidades del CRM y relaciones comerciales. */
+export const estateClient = pgTable("estate_client", {
+  id: text("id").primaryKey().references(() => contact.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  role: text("role").notNull().default("comprador"),
+  email: text("email"),
+  budgetMin: integer("budget_min"),
+  budgetMax: integer("budget_max"),
+  preferredCity: text("preferred_city"),
+  minRooms: integer("min_rooms"),
+  propertyType: text("property_type"),
+  assignedUserId: text("assigned_user_id").references(() => user.id),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, t => [index("estate_client_org_idx").on(t.organizationId)]);
+
+export const property = pgTable("property", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  reference: text("reference").notNull(),
+  title: text("title").notNull(),
+  type: text("type").notNull().default("piso"),
+  status: text("status").notNull().default("disponible"),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  postalCode: text("postal_code"),
+  priceCents: integer("price_cents").notNull(),
+  area: integer("area").notNull(),
+  rooms: integer("rooms").notNull(),
+  bathrooms: integer("bathrooms").notNull(),
+  garden: boolean("garden").notNull().default(false),
+  terrace: boolean("terrace").notNull().default(false),
+  garage: boolean("garage").notNull().default(false),
+  description: text("description"),
+  ownerContactId: text("owner_contact_id").references(() => contact.id),
+  assignedUserId: text("assigned_user_id").references(() => user.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, t => [uniqueIndex("property_org_reference_uq").on(t.organizationId, t.reference), index("property_org_status_idx").on(t.organizationId, t.status)]);
+
+export const estateDeal = pgTable("estate_deal", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  propertyId: text("property_id").notNull().references(() => property.id),
+  contactId: text("contact_id").notNull().references(() => contact.id),
+  assignedUserId: text("assigned_user_id").references(() => user.id),
+  phase: text("phase").notNull().default("nuevo"),
+  amountCents: integer("amount_cents"),
+  notes: text("notes"),
+  lostReason: text("lost_reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, t => [index("estate_deal_org_phase_idx").on(t.organizationId, t.phase)]);
+
+export const estateOffer = pgTable("estate_offer", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  dealId: text("deal_id").notNull().references(() => estateDeal.id),
+  kind: text("kind").notNull().default("oferta"),
+  amountCents: integer("amount_cents").notNull(),
+  status: text("status").notNull().default("pendiente"),
+  notes: text("notes"),
+  createdBy: text("created_by").notNull().references(() => user.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, t => [index("estate_offer_org_deal_idx").on(t.organizationId, t.dealId)]);
+
+export const estateVisit = pgTable("estate_visit", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  propertyId: text("property_id").notNull().references(() => property.id),
+  contactId: text("contact_id").notNull().references(() => contact.id),
+  assignedUserId: text("assigned_user_id").notNull().references(() => user.id),
+  startsAt: timestamp("starts_at").notNull(),
+  durationMinutes: integer("duration_minutes").notNull().default(30),
+  status: text("status").notNull().default("pendiente"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, t => [index("estate_visit_org_start_idx").on(t.organizationId, t.startsAt)]);
+
+export const estateDocument = pgTable("estate_document", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  title: text("title").notNull(),
+  category: text("category").notNull().default("otro"),
+  status: text("status").notNull().default("pendiente"),
+  visibility: text("visibility").notNull().default("restringido"),
+  version: integer("version").notNull().default(1),
+  previousId: text("previous_id"),
+  dueAt: timestamp("due_at"),
+  filename: text("filename"),
+  mime: text("mime"),
+  size: integer("size"),
+  storageId: text("storage_id"),
+  uploadedBy: text("uploaded_by").notNull().references(() => user.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, t => [index("estate_document_org_entity_idx").on(t.organizationId, t.entityType, t.entityId)]);
+
+export const estateActivity = pgTable("estate_activity", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  kind: text("kind").notNull(),
+  text: text("text").notNull(),
+  actorId: text("actor_id").notNull().references(() => user.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, t => [index("estate_activity_org_entity_idx").on(t.organizationId, t.entityType, t.entityId)]);

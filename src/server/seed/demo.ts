@@ -15,6 +15,10 @@ export async function seedDemo(
   db: Db,
   organizationId: string
 ): Promise<{ contacts: number; kbEntries: number }> {
+  for(const table of [schema.estateClient,schema.property,schema.estateDeal,schema.estateVisit,schema.estateDocument]){
+    const [linked]=await db.select({id:table.id}).from(table).where(scoped(table.organizationId,organizationId)).limit(1);
+    if(linked)throw new Error("Hay expedientes inmobiliarios vinculados: no se puede recargar la demo. Conserva las fichas y archiva los contactos que no uses.");
+  }
   const demoPhones = DEMO_CONTACTS.map((c) => c.phone);
 
   // --- Idempotencia: limpiar datos demo previos (orden inverso de FKs) ---

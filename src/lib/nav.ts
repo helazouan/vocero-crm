@@ -1,5 +1,9 @@
 import {
   CalendarDays,
+  Building2,
+  Handshake,
+  LayoutDashboard,
+  Files,
   ChartColumn,
   FlaskConical,
   Inbox,
@@ -57,6 +61,12 @@ export function appNavGroups({
   role?: string | null;
 }): NavGroup[] {
   const trabajo: NavItem[] = [
+    { href: "/work", label: "Mi jornada", icon: LayoutDashboard },
+    { href: "/properties", label: "Inmuebles", icon: Building2 },
+    { href: "/clients", label: "Clientes", icon: Users },
+    { href: "/deals", label: "Operaciones", icon: Handshake },
+    { href: "/agenda", label: "Agenda", icon: CalendarDays },
+    { href: "/documents", label: "Documentos", icon: Files },
     { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
     { href: "/pipeline", label: "Pipeline", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
@@ -64,7 +74,7 @@ export function appNavGroups({
   ];
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.
-  if (agenda) trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });
+  if (agenda) trabajo.push({ href: "/bookings", label: "Otras citas", icon: CalendarDays });
 
   const agente: NavItem[] = [];
   // Un miembro del equipo no puede hacer ninguno de los pasos de la guía.

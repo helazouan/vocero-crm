@@ -20,20 +20,21 @@ describe("barra lateral agrupada", () => {
     const groups = appNavGroups({ role: "member" });
     expect(groups.map((g) => g.title)).toEqual(["Trabajo", "Agente", undefined]);
     expect(labels(groups)).toEqual([
-      ["Bandeja", "Pipeline", "Contactos", "Seguimientos"],
+      ["Mi jornada", "Inmuebles", "Clientes", "Operaciones", "Agenda", "Documentos", "Bandeja", "Pipeline", "Contactos", "Seguimientos"],
       ["Agente", "Laboratorio"],
       ["Resultados"],
     ]);
   });
 
-  it("AGENDA añade Citas al final de Trabajo", () => {
+  it("AGENDA añade Otras citas al final de Trabajo", () => {
     const [trabajo] = appNavGroups({ agenda: true, role: "member" });
     expect(trabajo!.items.map((i) => i.label)).toEqual([
+      "Mi jornada", "Inmuebles", "Clientes", "Operaciones", "Agenda", "Documentos",
       "Bandeja",
       "Pipeline",
       "Contactos",
       "Seguimientos",
-      "Citas",
+      "Otras citas",
     ]);
     expect(trabajo!.items.at(-1)!.href).toBe("/bookings");
   });
